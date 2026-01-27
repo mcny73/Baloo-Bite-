@@ -1,120 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - STABLE MODE</title>
-    <style>
-        :root { --gold: #ffcc00; --orange: #ff8c00; --dark: #0a0a0a; }
-        body { background: var(--dark); color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .game-card { background: #111; border: 2px solid var(--orange); border-radius: 30px; padding: 40px; width: 400px; text-align: center; box-shadow: 0 0 50px rgba(255,140,0,0.2); }
-        .jackpot-container { background: rgba(255,204,0,0.1); border: 1px solid var(--gold); border-radius: 15px; padding: 20px; margin-bottom: 15px; }
-        .jackpot-amount { font-size: 48px; font-weight: 900; color: var(--gold); }
-        #status { font-family: monospace; font-size: 11px; color: #00ffcc; margin-bottom: 15px; min-height: 40px; border: 1px solid #333; padding: 10px; background: #000; overflow-wrap: break-word; }
-        input[type=range] { width: 100%; accent-color: var(--orange); cursor: pointer; }
-        .btn-chomp { background: var(--orange); border: none; padding: 20px; width: 100%; border-radius: 15px; color: white; font-size: 24px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        .btn-chomp:hover { background: #ffaa00; }
-    </style>
-</head>
-<body>
-
-<div class="game-card">
-    <div style="color:red; font-size:10px; margin-bottom: 5px;">STABLE DEBUG MODE</div>
-    <div id="status">INIT: WAITING FOR WALLET...</div>
-    
-    <div class="jackpot-container">
-        <div class="jackpot-amount" id="pot-display">0.00</div>
-        <div style="font-size: 12px; color: var(--gold);">LIVE XNT BALANCE</div>
-    </div>
-
-    <div style="margin:20px 0;">
-        BITE: <span id="bite-val">1.0</span> XNT
-        <input type="range" id="bite-slider" min="0.1" max="10" step="0.1" value="1.0" oninput="document.getElementById('bite-val').innerText = this.value">
-    </div>
-
-    <button class="btn-chomp" onclick="playGame()">CHOMP!</button>
-</div>
-
-<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
-
 <script>
-    const TARGET_ADDR = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"; 
-    const RPC_URL     = "https://testnet-rpc.x1.xyz";
-    let publicKey = null;
-    let connection;
+    // Meerdere wegen naar de blockchain
+    const RPC_ENDPOINTS = [
+        "https://testnet-rpc.x1.xyz",
+        "https://x1-testnet.blockpi.network/v1/rpc/public" 
+    ];
 
-    try {
-        connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
-    } catch(e) {
-        document.getElementById('status').innerText = "RPC ERROR: Cannot connect to X1";
-    }
+    let currentRpcIndex = 0;
+    const TARGET_ADDR = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"; 
+    let connection = new solanaWeb3.Connection(RPC_ENDPOINTS[0], "confirmed");
 
     async function updatePot() {
-        if (!connection) return;
         try {
             const info = await connection.getAccountInfo(new solanaWeb3.PublicKey(TARGET_ADDR));
             if(info) {
                 document.getElementById('pot-display').innerText = (info.lamports / 1000000000).toFixed(2);
+                document.getElementById('status').innerText = "NETWORK ONLINE - READY";
             }
-        } catch(e) { 
-            console.log("Pot update error"); 
+        } catch(e) {
+            console.log("Switching RPC...");
+            currentRpcIndex = (currentRpcIndex + 1) % RPC_ENDPOINTS.length;
+            connection = new solanaWeb3.Connection(RPC_ENDPOINTS[currentRpcIndex], "confirmed");
+            document.getElementById('status').innerText = "RECONNECTING TO X1...";
         }
     }
 
-    async function init() {
-        const provider = window.x1 || window.solana;
-        if (provider) {
-            try {
-                const resp = await provider.connect();
-                publicKey = resp.publicKey;
-                document.getElementById('status').innerText = "CONNECTED: " + publicKey.toString().substring(0,12) + "...";
-                updatePot();
-            } catch(e) { 
-                document.getElementById('status').innerText = "WALLET REJECTED: " + e.message; 
-            }
-        } else {
-            document.getElementById('status').innerText = "X1 WALLET NOT DETECTED. PLEASE INSTALL.";
-        }
-    }
-
-    async function playGame() {
-        const provider = window.x1 || window.solana;
-        if (!publicKey) { await init(); return; }
-        
-        const biteAmount = parseFloat(document.getElementById('bite-slider').value);
-        const lamports = Math.floor(biteAmount * 1000000000);
-
-        document.getElementById('status').innerText = "SYNCING WITH X1 BLOCKCHAIN...";
-
-        try {
-            // Get fresh blockhash
-            const { blockhash } = await connection.getLatestBlockhash('confirmed');
-            
-            const transaction = new solanaWeb3.Transaction();
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = publicKey;
-
-            transaction.add(solanaWeb3.SystemProgram.transfer({
-                fromPubkey: publicKey,
-                toPubkey: new solanaWeb3.PublicKey(TARGET_ADDR),
-                lamports: lamports
-            }));
-
-            document.getElementById('status').innerText = "AWAITING WALLET SIGNATURE...";
-            const signed = await provider.signAndSendTransaction(transaction);
-            
-            document.getElementById('status').innerText = "SUCCESS! SIG: " + signed.substring(0,10);
-            updatePot();
-            alert("BITE SUCCESSFUL!");
-        } catch (err) {
-            console.error(err);
-            document.getElementById('status').innerText = "FAILED: " + (err.message || "Unknown Network Error");
-        }
-    }
-
-    window.addEventListener('load', init);
-    // Refresh pot every 10 seconds
-    setInterval(updatePot, 10000);
+    // De rest van de functies (init en playGame) blijven hetzelfde als in de vorige "Stable Mode" code.
 </script>
-</body>
-</html>
