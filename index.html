@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - V15 IRONCLAD</title>
+    <title>BALOO BITE - V16 FINAL</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #0a0a0a; border: 2px solid #444; border-radius: 20px; padding: 40px; text-align: center; width: 350px; box-shadow: 0 0 40px rgba(255,140,0,0.1); }
+        .card { background: #0a0a0a; border: 2px solid #444; border-radius: 20px; padding: 40px; text-align: center; width: 350px; }
         .status-box { background: #001a00; color: #00ff00; padding: 15px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 30px; text-align: left; min-height: 100px; border-radius: 10px; }
         .pot-val { font-size: 42px; color: #ffcc00; font-weight: bold; margin-bottom: 30px; }
         .btn-chomp { background: #ff8c00; color: #fff; border: none; padding: 25px; width: 100%; cursor: pointer; font-weight: bold; font-size: 20px; border-radius: 12px; text-transform: uppercase; box-shadow: 0 5px 0 #b36200; }
@@ -16,32 +16,29 @@
 <body>
 
 <div class="card">
-    <div class="status-box" id="status">V15_ENGINE: STANDBY<br>READY FOR DEEP STRESS TEST</div>
+    <div class="status-box" id="status">V16_ENGINE: STANDBY<br>STABILITY_ENFORCED: YES</div>
     <div class="pot-val">1.0 XNT</div>
-    <button class="btn-chomp" id="mainBtn" onclick="ironcladChomp()">Execute Hard Chomp</button>
+    <button class="btn-chomp" id="mainBtn" onclick="finalChomp()">Execute Hard Chomp</button>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
-    async function ironcladChomp() {
+    async function finalChomp() {
         const log = document.getElementById('status');
         const btn = document.getElementById('mainBtn');
         const provider = window.backpack;
 
         try {
             btn.disabled = true;
-            log.innerHTML = "PHASE 1: NUCLEAR SESSION RESET...";
+            log.innerHTML = "ACTION: NUCLEAR RESET...<br>PLEASE WAIT 5 SECONDS.";
             
-            // We verbreken de verbinding volledig om de cache van de plugin te legen
+            // We dwingen een keiharde pauze af VOORDAT we de wallet zelfs maar aanraken
             if (provider.disconnect) await provider.disconnect().catch(() => {});
+            await new Promise(r => setTimeout(r, 5000)); 
             
-            // We wachten nu 3 seconden in totale stilte voor we de wallet weer aanraken
-            await new Promise(r => setTimeout(r, 3000)); 
-            
-            log.innerHTML = "PHASE 2: FRESH HANDSHAKE...";
+            log.innerHTML = "ACTION: OPENING FRESH SESSION...";
             await provider.connect();
 
-            log.innerHTML = "PHASE 3: BITING ON-CHAIN...";
             const tx = new solanaWeb3.Transaction().add(
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: provider.publicKey,
@@ -50,16 +47,18 @@
                 })
             );
 
+            log.innerHTML = "ACTION: WAITING FOR APPROVAL...";
             const result = await provider.signAndSendTransaction(tx);
-            log.innerHTML = "SUCCESS: VERIFIED<br>SIG: " + result.signature.toString().substring(0, 20);
+            log.innerHTML = "VERIFIED SUCCESS!<br>SIG: " + result.signature.toString().substring(0, 20);
 
         } catch (err) {
-            log.innerHTML = "SYSTEM LOCK: WALLET OVERLOAD<br>DUE TO SECURITY PROTOCOL.";
+            console.error(err);
+            log.innerHTML = "SYSTEM LOCK: WALLET STILL BUSY.<br>F5 REFRESH RECOMMENDED.";
         } finally {
-            // We gaan naar 20 seconden pauze om de wallet 100% rust te geven
-            let countdown = 20;
+            // De timer is nu 30 seconden voor absolute zekerheid
+            let countdown = 30;
             const timer = setInterval(() => {
-                btn.innerText = `RECOVERING (${countdown}s)`;
+                btn.innerText = `READY IN ${countdown}S`;
                 countdown--;
                 if (countdown < 0) {
                     clearInterval(timer);
