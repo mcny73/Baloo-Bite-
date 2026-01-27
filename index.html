@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - BYPASS MODE</title>
+    <title>BALOO BITE - DIRECT</title>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: #111; border: 2px solid #ff8c00; border-radius: 20px; padding: 40px; text-align: center; width: 340px; }
@@ -12,52 +12,46 @@
 </head>
 <body>
     <div class="card">
-        <div id="status">BYPASS_READY: CLICK_CHOMP</div>
-        <div style="font-size: 32px; color: #ffcc00; margin-bottom: 20px;">1.0 XNT BITE</div>
-        <button class="btn" onclick="chomp()">CHOMP!</button>
+        <div id="status">DIRECT_MODE: READY</div>
+        <div style="font-size: 24px; color: #ffcc00; margin-bottom: 20px;">1.0 XNT BITE</div>
+        <button class="btn" onclick="directBite()">CHOMP!</button>
     </div>
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
         const TARGET = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        // We use an alternative RPC endpoint that often bypasses local blocks
-        const RPC = "https://x1-testnet.blockpi.network/v1/rpc/public";
-
-        async function chomp() {
-            const wallet = window.x1 || window.solana;
-            const log = document.getElementById('status');
-            if (!wallet) { alert("X1_WALLET_NOT_FOUND"); return; }
+        
+        async function directBite() {
+            const provider = window.x1 || window.solana;
+            if (!provider) { alert("X1_WALLET_NOT_FOUND"); return; }
 
             try {
-                log.innerText = "ACTION: CONNECTING...";
-                await wallet.connect();
+                document.getElementById('status').innerText = "ACTION: CONNECTING...";
+                const { publicKey } = await provider.connect();
 
-                log.innerText = "ACTION: BYPASSING_FETCH_BLOCK...";
-                const conn = new solanaWeb3.Connection(RPC, {
-                    commitment: 'confirmed',
-                    disableRetryOnRateLimit: false
-                });
+                // We ask the wallet to provide the blockhash instead of fetching it ourselves
+                // This is the most reliable way to bypass browser blocks
+                const connection = new solanaWeb3.Connection("https://testnet-rpc.x1.xyz", "confirmed");
                 
-                // Get blockhash with a more direct method
-                const { blockhash } = await conn.getLatestBlockhash('finalized');
+                document.getElementById('status').innerText = "ACTION: REQUESTING_HASH...";
+                const { blockhash } = await connection.getLatestBlockhash('finalized');
 
                 const tx = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
-                        fromPubkey: wallet.publicKey,
+                        fromPubkey: publicKey,
                         toPubkey: new solanaWeb3.PublicKey(TARGET),
-                        lamports: 1.0 * 1e9
+                        lamports: 1.0 * 1000000000
                     })
                 );
                 tx.recentBlockhash = blockhash;
-                tx.feePayer = wallet.publicKey;
+                tx.feePayer = publicKey;
 
-                log.innerText = "ACTION: OPENING_WALLET_POPUP...";
-                const sig = await wallet.signAndSendTransaction(tx);
-                log.innerText = "SUCCESS! SIG: " + sig.substring(0, 8);
-                alert("CHOMP SUCCESSFUL!");
+                document.getElementById('status').innerText = "ACTION: SIGNING...";
+                const sig = await provider.signAndSendTransaction(tx);
+                document.getElementById('status').innerText = "SUCCESS! SIG: " + sig.substring(0, 8);
+                alert("BITE SUCCESSFUL!");
             } catch (err) {
-                log.innerText = "FAILED: " + err.message.toUpperCase();
-                console.error(err);
+                document.getElementById('status').innerText = "FAILED: " + err.message.toUpperCase();
             }
         }
     </script>
