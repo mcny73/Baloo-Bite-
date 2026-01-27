@@ -3,116 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baloo's Bite - SVM Edition</title>
+    <title>Baloo's Bite - SVM Fixed</title>
     <style>
-        body {
-            background-color: #1a1a1a;
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            text-align: center;
-            background: #2a2a2a;
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-            border: 2px solid #ff8c00;
-        }
-        h1 { color: #ff8c00; margin-bottom: 1rem; }
-        .dog-emoji { font-size: 80px; margin: 20px 0; }
-        #status { font-weight: bold; color: #00ffcc; margin: 15px 0; font-family: monospace; }
-        input[type=range] { width: 100%; margin: 20px 0; }
-        button {
-            background-color: #ff8c00;
-            border: none;
-            color: white;
-            padding: 15px 32px;
-            font-size: 20px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        button:hover { transform: scale(1.05); background-color: #e67e00; }
+        body { background-color: #1a1a1a; color: #ffffff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { text-align: center; background: #2a2a2a; padding: 2rem; border-radius: 15px; border: 2px solid #ff8c00; }
+        #status { font-weight: bold; color: #00ffcc; margin: 15px 0; }
+        button { background-color: #ff8c00; border: none; color: white; padding: 15px 32px; font-size: 20px; border-radius: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
-
 <div class="container">
     <h1>BALOO'S BITE</h1>
-    <div class="dog-emoji">🐕</div>
-    
-    <div id="status">WALLET STATUS: DISCONNECTED</div>
-    
-    <p>Adjust your bite amount:</p>
-    <input type="range" id="bet-slider" min="0.1" max="10" step="0.1" value="0.25" oninput="updateDisplay(this.value)">
-    <p><span id="bite-amount">0.25</span> XNT</p>
-
+    <div id="status">SEARCHING FOR X1 WALLET...</div>
     <button onclick="chomp()">CHOMP!</button>
 </div>
 
 <script>
     let publicKey = null;
 
-    function updateDisplay(val) {
-        document.getElementById('bite-amount').innerText = val;
-    }
+    async function initWallet() {
+        const maxAttempts = 10;
+        let attempts = 0;
 
-    // Connect to the X1 SVM Wallet
-    async function connectWallet() {
-        try {
-            const provider = window.x1; 
-            if (provider && provider.isX1) {
-                const response = await provider.connect();
-                publicKey = response.publicKey.toString();
-                document.getElementById('status').innerText = "CONNECTED: " + publicKey;
-                console.log("SVM Wallet connected:", publicKey);
+        const checkProvider = async () => {
+            // Check for both window.x1 and window.solana
+            const provider = window.x1 || window.solana;
+            
+            if (provider) {
+                console.log("X1 Provider found!");
+                try {
+                    const resp = await provider.connect();
+                    publicKey = resp.publicKey.toString();
+                    document.getElementById('status').innerText = "CONNECTED: " + publicKey;
+                } catch (err) {
+                    document.getElementById('status').innerText = "PLEASE UNLOCK X1 WALLET";
+                }
+            } else if (attempts < maxAttempts) {
+                attempts++;
+                document.getElementById('status').innerText = "RETRIEVING WALLET (" + attempts + "/10)...";
+                setTimeout(checkProvider, 1000); // Try again every second
             } else {
-                document.getElementById('status').innerText = "X1 WALLET NOT FOUND";
+                document.getElementById('status').innerText = "X1 WALLET NOT FOUND - PLEASE REFRESH";
             }
-        } catch (err) {
-            console.error("Connection error:", err);
-            document.getElementById('status').innerText = "CONNECTION FAILED";
-        }
+        };
+
+        checkProvider();
     }
 
-    // Trigger the transaction verzoek
     async function chomp() {
         if (!publicKey) {
-            await connectWallet();
+            await initWallet();
             return;
         }
-
         try {
-            const provider = window.x1;
-            const amount = document.getElementById('bet-slider').value;
-            
-            alert("Ready to bite " + amount + " XNT. Please confirm in your X1 Wallet!");
-
-            // Since X1 is SVM, we send a signMessage request to trigger the wallet
-            const message = "Baloo Bite Confirmation: " + amount + " XNT";
-            const encodedMessage = new TextEncoder().encode(message);
-            const signedMessage = await provider.signMessage(encodedMessage, "utf8");
-
-            console.log("Bite Signature:", signedMessage);
-            alert("BITE SUCCESSFUL! Transaction signed.");
+            const provider = window.x1 || window.solana;
+            const message = new TextEncoder().encode("Baloo Bite Transaction");
+            await provider.signMessage(message, "utf8");
+            alert("BITE SUCCESSFUL!");
         } catch (err) {
-            console.error("Bite failed:", err);
-            alert("Bite rejected by wallet.");
+            alert("Action rejected.");
         }
     }
 
-    // Auto-check for wallet on load
-    window.addEventListener('load', () => {
-        if (window.x1) connectWallet();
-    });
+    // Start looking for the wallet immediately
+    window.addEventListener('load', initWallet);
 </script>
-
 </body>
 </html>
