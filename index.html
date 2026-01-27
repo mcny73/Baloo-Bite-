@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - V7 ULTIMATE</title>
+    <title>BALOO BITE - ULTIMATE STABILITY</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: #0a0a0a; border: 2px solid #333; border-radius: 15px; padding: 30px; text-align: center; width: 350px; }
-        .status-box { background: #001a00; color: #00ff00; padding: 15px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 25px; text-align: left; min-height: 80px; word-break: break-all; line-height: 1.4; }
+        .status-box { background: #001a00; color: #00ff00; padding: 15px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 25px; text-align: left; min-height: 85px; word-break: break-all; line-height: 1.4; }
         .btn-chomp { background: #ff8c00; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 8px; text-transform: uppercase; }
         .btn-chomp:disabled { background: #222; color: #666; cursor: not-allowed; }
     </style>
@@ -15,29 +15,33 @@
 <body>
 
 <div class="card">
-    <div class="status-box" id="status">V7_ENGINE: READY<br>STABILITY: MAX</div>
+    <div class="status-box" id="status">V8_STABILITY: ACTIVE<br>STATUS: READY_FOR_TEST</div>
     <div style="font-size: 28px; color: #ffcc00; margin-bottom: 25px; font-weight: bold;">1.0 XNT</div>
-    <button class="btn-chomp" id="mainBtn" onclick="executeSafeChomp()">Execute Hard Chomp</button>
+    <button class="btn-chomp" id="mainBtn" onclick="executeV8Chomp()">Execute Hard Chomp</button>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 
 <script>
-    async function executeSafeChomp() {
+    async function executeV8Chomp() {
         const log = document.getElementById('status');
         const btn = document.getElementById('mainBtn');
         const provider = window.backpack;
 
         try {
             btn.disabled = true;
-            log.innerHTML = "STATUS: RESETTING SESSION...";
+            log.innerHTML = "STATUS: FORCING SESSION RESET...";
             
-            // DIT IS DE FIX: Forceer een disconnect en daarna een nieuwe connect
-            if (provider.disconnect) await provider.disconnect().catch(() => {});
-            await new Promise(r => setTimeout(r, 500)); // Korte adempauze voor de wallet
+            // Harde reset van de wallet verbinding om 'Plugin Closed' te voorkomen
+            if (provider && provider.disconnect) {
+                await provider.disconnect().catch(() => {});
+            }
+            
+            // Wacht 1 seconde zodat de browser en wallet kunnen synchroniseren
+            await new Promise(r => setTimeout(r, 1000));
             await provider.connect();
 
-            log.innerHTML = "STATUS: BUILDING TRANSACTION...";
+            log.innerHTML = "STATUS: PREPARING CLEAN TX...";
             
             const transaction = new solanaWeb3.Transaction().add(
                 solanaWeb3.SystemProgram.transfer({
@@ -47,24 +51,26 @@
                 })
             );
 
-            log.innerHTML = "STATUS: AWAITING APPROVAL...";
+            log.innerHTML = "STATUS: AWAITING APPROVAL...<br>CHECK WALLET POPUP NOW";
             const result = await provider.signAndSendTransaction(transaction);
             const sig = result.signature || result;
 
-            log.innerHTML = "VERIFIED SUCCESS!<br>SIG: " + sig.toString().substring(0, 20);
+            log.innerHTML = "VERIFIED SUCCESS!<br>SIG: " + sig.toString().substring(0, 22);
 
         } catch (err) {
             console.error(err);
-            log.innerHTML = "INTERRUPT: " + err.message.toUpperCase() + "<br>RETRYING IN 5 SECONDS...";
+            log.innerHTML = "INTERRUPT: " + err.message.toUpperCase() + "<br>PLEASE WAIT FOR TIMER.";
         } finally {
-            let countdown = 5;
+            // Verlengde timer voor absolute veiligheid van de wallet-sessie
+            let countdown = 8;
             const timer = setInterval(() => {
-                btn.innerText = `WAIT (${countdown}s)`;
+                btn.innerText = `NEXT CHOMP IN ${countdown}s`;
                 countdown--;
                 if (countdown < 0) {
                     clearInterval(timer);
                     btn.disabled = false;
                     btn.innerText = "Execute Hard Chomp";
+                    if(!log.innerHTML.includes('SUCCESS')) log.innerHTML = "V8_ENGINE: STANDBY";
                 }
             }, 1000);
         }
