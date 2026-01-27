@@ -3,63 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO'S BITE | X1 SVM</title>
+    <title>Baloo's Bite - SVM Edition</title>
     <style>
-        body { background-color: #050505; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; text-align: center; padding: 40px; }
-        .game-container { border: 2px solid #222; background: #111; padding: 40px; border-radius: 25px; display: inline-block; box-shadow: 0 0 40px rgba(0, 242, 255, 0.1); max-width: 400px; }
-        h1 { letter-spacing: 4px; margin-bottom: 10px; }
-        .jackpot-display { color: #ff9900; font-size: 24px; border: 1px solid #ff9900; padding: 15px; border-radius: 12px; margin: 20px 0; background: rgba(255, 153, 0, 0.05); }
-        .slider-section { margin: 30px 0; }
-        input[type=range] { width: 100%; cursor: pointer; accent-color: #00f2ff; }
-        .bet-info { font-size: 18px; margin-bottom: 10px; color: #00f2ff; }
-        .btn-crunch { background: linear-gradient(45deg, #ff4500, #ff8c00); color: white; padding: 20px; border: none; border-radius: 12px; cursor: pointer; font-size: 22px; width: 100%; font-weight: bold; text-transform: uppercase; transition: 0.3s; }
-        .btn-crunch:hover { transform: scale(1.02); box-shadow: 0 0 25px rgba(255, 69, 0, 0.5); }
-        #status { margin-top: 25px; font-family: monospace; font-size: 12px; color: #666; }
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            background: #2a2a2a;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            border: 2px solid #ff8c00;
+        }
+        h1 { color: #ff8c00; margin-bottom: 1rem; }
+        .dog-emoji { font-size: 80px; margin: 20px 0; }
+        #status { font-weight: bold; color: #00ffcc; margin: 15px 0; font-family: monospace; }
+        input[type=range] { width: 100%; margin: 20px 0; }
+        button {
+            background-color: #ff8c00;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.05); background-color: #e67e00; }
     </style>
 </head>
 <body>
 
-    <div class="game-container">
-        <h1>BALOO'S BITE</h1>
-        <div class="jackpot-display">JACKPOT: 1,250.00 XNT</div>
-        
-        <div class="slider-section">
-            <div class="bet-info">YOUR BITE: <span id="betAmount">1.00</span> XNT</div>
-            <input type="range" id="biteSlider" min="0.25" max="10" step="0.25" value="1.00" oninput="updateDisplay(this.value)">
-        </div>
+<div class="container">
+    <h1>BALOO'S BITE</h1>
+    <div class="dog-emoji">🐕</div>
+    
+    <div id="status">WALLET STATUS: DISCONNECTED</div>
+    
+    <p>Adjust your bite amount:</p>
+    <input type="range" id="bet-slider" min="0.1" max="10" step="0.1" value="0.25" oninput="updateDisplay(this.value)">
+    <p><span id="bite-amount">0.25</span> XNT</p>
 
-        <button class="btn-crunch" onclick="initiateBite()">CHOMP!</button>
-        
-        <div id="status">WALLET STATUS: DISCONNECTED</div>
-    </div>
+    <button onclick="chomp()">CHOMP!</button>
+</div>
 
-    <script>
-        function updateDisplay(val) {
-            document.getElementById('betAmount').innerText = parseFloat(val).toFixed(2);
-        }
+<script>
+    let publicKey = null;
 
-        async function initiateBite() {
-            const statusDiv = document.getElementById('status');
-            const amount = document.getElementById('biteSlider').value;
-            
-            // Checking for X1 / Solana provider
-            const provider = window.x1 || window.solana;
+    function updateDisplay(val) {
+        document.getElementById('bite-amount').innerText = val;
+    }
 
-            if (provider) {
-                try {
-                    statusDiv.innerText = "REQUESTING CONNECTION...";
-                    const response = await provider.connect();
-                    statusDiv.innerText = "CONNECTED: " + response.publicKey.toString().substring(0, 8) + "...";
-                    
-                    alert("Ready to bite " + amount + " XNT. Please confirm the transaction in your X1 Wallet.");
-                } catch (err) {
-                    statusDiv.innerText = "ERROR: " + err.message;
-                }
+    // Connect to the X1 SVM Wallet
+    async function connectWallet() {
+        try {
+            const provider = window.x1; 
+            if (provider && provider.isX1) {
+                const response = await provider.connect();
+                publicKey = response.publicKey.toString();
+                document.getElementById('status').innerText = "CONNECTED: " + publicKey;
+                console.log("SVM Wallet connected:", publicKey);
             } else {
-                statusDiv.innerText = "ERROR: X1 WALLET NOT DETECTED";
-                alert("Please ensure your X1 Wallet extension is active.");
+                document.getElementById('status').innerText = "X1 WALLET NOT FOUND";
             }
+        } catch (err) {
+            console.error("Connection error:", err);
+            document.getElementById('status').innerText = "CONNECTION FAILED";
         }
-    </script>
+    }
+
+    // Trigger the transaction verzoek
+    async function chomp() {
+        if (!publicKey) {
+            await connectWallet();
+            return;
+        }
+
+        try {
+            const provider = window.x1;
+            const amount = document.getElementById('bet-slider').value;
+            
+            alert("Ready to bite " + amount + " XNT. Please confirm in your X1 Wallet!");
+
+            // Since X1 is SVM, we send a signMessage request to trigger the wallet
+            const message = "Baloo Bite Confirmation: " + amount + " XNT";
+            const encodedMessage = new TextEncoder().encode(message);
+            const signedMessage = await provider.signMessage(encodedMessage, "utf8");
+
+            console.log("Bite Signature:", signedMessage);
+            alert("BITE SUCCESSFUL! Transaction signed.");
+        } catch (err) {
+            console.error("Bite failed:", err);
+            alert("Bite rejected by wallet.");
+        }
+    }
+
+    // Auto-check for wallet on load
+    window.addEventListener('load', () => {
+        if (window.x1) connectWallet();
+    });
+</script>
+
 </body>
 </html>
