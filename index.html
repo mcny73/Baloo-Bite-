@@ -3,70 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baloo's Bite - SVM Fixed</title>
+    <title>Baloo's Bite - SVM Pro</title>
     <style>
-        body { background-color: #1a1a1a; color: #ffffff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .container { text-align: center; background: #2a2a2a; padding: 2rem; border-radius: 15px; border: 2px solid #ff8c00; }
-        #status { font-weight: bold; color: #00ffcc; margin: 15px 0; }
-        button { background-color: #ff8c00; border: none; color: white; padding: 15px 32px; font-size: 20px; border-radius: 8px; cursor: pointer; }
+        body { background: #0a0a0a; color: #eee; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        .card { background: #151515; padding: 40px; border-radius: 24px; border: 1px solid #333; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 100%; max-width: 400px; text-align: center; position: relative; }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #ff8c00, #ff0055); border-radius: 24px 24px 0 0; }
+        h1 { color: #ff8c00; font-size: 28px; letter-spacing: 3px; margin: 0 0 10px; }
+        #status { font-family: monospace; font-size: 12px; color: #00ffcc; margin-bottom: 20px; min-height: 20px; }
+        .pot-info { background: #222; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px dashed #444; }
+        .pot-label { font-size: 12px; color: #888; text-transform: uppercase; }
+        .pot-value { font-size: 20px; color: #ff8c00; font-weight: bold; }
+        .slider-container { margin: 30px 0; }
+        input[type=range] { width: 100%; accent-color: #ff8c00; cursor: pointer; }
+        .amount-display { font-size: 32px; font-weight: bold; margin: 10px 0; color: #fff; }
+        button { background: #ff8c00; color: #fff; border: none; padding: 18px; width: 100%; font-size: 20px; font-weight: bold; border-radius: 14px; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #ff9d26; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255, 140, 0, 0.3); }
+        button:active { transform: translateY(0); }
     </style>
 </head>
 <body>
-<div class="container">
+
+<div class="card">
     <h1>BALOO'S BITE</h1>
-    <div id="status">SEARCHING FOR X1 WALLET...</div>
-    <button onclick="chomp()">CHOMP!</button>
+    <div id="status">CONNECTING TO X1...</div>
+
+    <div class="pot-info">
+        <div class="pot-label">Current Jackpot Pot (90%)</div>
+        <div class="pot-value">Loading...</div>
+    </div>
+
+    <div class="slider-container">
+        <div class="amount-display"><span id="val">0.25</span> <small style="font-size: 14px; color: #666;">XNT</small></div>
+        <input type="range" id="bite-slider" min="0.1" max="10" step="0.1" value="0.25">
+    </div>
+
+    <button onclick="executeBite()">CHOMP!</button>
 </div>
 
+<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
+    // --- EXACT ADDRESSES ---
+    const ADDR_OWNER = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"; // 8%
+    const ADDR_BURN  = "7ydovVxaUsFnYkM7GdK2kXQU4dX7yGzCtZJ8YjeZ2SXH"; // 2% (Buy $BALOO & Burn)
+    const ADDR_POT   = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"; // 90% (Using owner as temporary vault for Pot)
+    const RPC_URL    = "https://testnet-rpc.x1.xyz";
+
     let publicKey = null;
+    const slider = document.getElementById('bite-slider');
+    const display = document.getElementById('val');
 
-    async function initWallet() {
-        const maxAttempts = 10;
-        let attempts = 0;
+    slider.oninput = () => display.innerText = slider.value;
 
-        const checkProvider = async () => {
-            // Check for both window.x1 and window.solana
-            const provider = window.x1 || window.solana;
-            
-            if (provider) {
-                console.log("X1 Provider found!");
-                try {
-                    const resp = await provider.connect();
-                    publicKey = resp.publicKey.toString();
-                    document.getElementById('status').innerText = "CONNECTED: " + publicKey;
-                } catch (err) {
-                    document.getElementById('status').innerText = "PLEASE UNLOCK X1 WALLET";
-                }
-            } else if (attempts < maxAttempts) {
-                attempts++;
-                document.getElementById('status').innerText = "RETRIEVING WALLET (" + attempts + "/10)...";
-                setTimeout(checkProvider, 1000); // Try again every second
-            } else {
-                document.getElementById('status').innerText = "X1 WALLET NOT FOUND - PLEASE REFRESH";
-            }
-        };
-
-        checkProvider();
+    async function init() {
+        const provider = window.x1 || window.solana;
+        if (provider) {
+            try {
+                const resp = await provider.connect();
+                publicKey = resp.publicKey;
+                document.getElementById('status').innerText = "WALLET: " + publicKey.toString().substring(0,6) + "..." + publicKey.toString().slice(-4);
+            } catch (e) { document.getElementById('status').innerText = "CONNECTION FAILED"; }
+        }
     }
 
-    async function chomp() {
-        if (!publicKey) {
-            await initWallet();
-            return;
-        }
+    async function executeBite() {
+        if (!publicKey) { await init(); return; }
+        const provider = window.x1 || window.solana;
+        const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
+        
+        const totalXNT = parseFloat(slider.value);
+        const lamports = totalXNT * 1000000000;
+
+        // Splitting the Bite
+        const pPot  = Math.floor(lamports * 0.90);
+        const pDev  = Math.floor(lamports * 0.08);
+        const pBurn = Math.floor(lamports * 0.02);
+
         try {
-            const provider = window.x1 || window.solana;
-            const message = new TextEncoder().encode("Baloo Bite Transaction");
-            await provider.signMessage(message, "utf8");
-            alert("BITE SUCCESSFUL!");
+            document.getElementById('status').innerText = "TRANSACTION PENDING...";
+            const transaction = new solanaWeb3.Transaction();
+
+            // Instruction 1: 90% to Pot
+            transaction.add(solanaWeb3.SystemProgram.transfer({
+                fromPubkey: publicKey, toPubkey: new solanaWeb3.PublicKey(ADDR_POT), lamports: pPot
+            }));
+            // Instruction 2: 8% to You
+            transaction.add(solanaWeb3.SystemProgram.transfer({
+                fromPubkey: publicKey, toPubkey: new solanaWeb3.PublicKey(ADDR_OWNER), lamports: pDev
+            }));
+            // Instruction 3: 2% to Burn Wallet
+            transaction.add(solanaWeb3.SystemProgram.transfer({
+                fromPubkey: publicKey, toPubkey: new solanaWeb3.PublicKey(ADDR_BURN), lamports: pBurn
+            }));
+
+            transaction.feePayer = publicKey;
+            const { blockhash } = await connection.getLatestBlockhash();
+            transaction.recentBlockhash = blockhash;
+
+            const signed = await provider.signAndSendTransaction(transaction);
+            document.getElementById('status').innerText = "BITE SUCCESSFUL!";
+            alert("Bite complete! Distributed: 90% Pot | 8% Dev | 2% Burn");
         } catch (err) {
-            alert("Action rejected.");
+            alert("Bite failed. Check balance.");
+            document.getElementById('status').innerText = "ERROR";
         }
     }
 
-    // Start looking for the wallet immediately
-    window.addEventListener('load', initWallet);
+    window.addEventListener('load', init);
 </script>
 </body>
 </html>
