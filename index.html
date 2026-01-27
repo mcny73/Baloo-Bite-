@@ -1,14 +1,13 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - HIGH STAKES</title>
+    <title>BALOO BITE - ROTTWEILER SLOTS</title>
     <style>
         body { background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .game-card { background: #0a0a0a; border: 5px solid #ffd700; border-radius: 25px; padding: 40px; text-align: center; width: 400px; box-shadow: 0 0 60px rgba(255,215,0,0.2); }
         
-        /* Slider Styling */
         .bet-container { margin: 20px 0; background: #111; padding: 20px; border-radius: 15px; border: 1px solid #444; }
         .bet-slider { width: 100%; cursor: pointer; accent-color: #ffcc00; }
         .bet-labels { display: flex; justify-content: space-between; font-size: 12px; color: #888; margin-top: 5px; }
@@ -38,7 +37,7 @@
     <div style="color: #ffd700; letter-spacing: 3px; font-size: 20px;">BALOO BITE - X1 EDITION</div>
     
     <div class="pot-value" id="displayBet">1.00</div>
-    <div style="color: #ffcc00; margin-top: -15px; font-size: 14px;">XNT INZET</div>
+    <div style="color: #ffcc00; margin-top: -15px; font-size: 14px;">XNT WAGER</div>
 
     <div class="bet-container">
         <input type="range" min="0.25" max="10" step="0.25" value="1.00" class="bet-slider" id="betSlider" oninput="updateBetDisplay()">
@@ -61,7 +60,7 @@
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
-    const bones = ['🦴', '🥈', '🥇']; // Wit, Zilver, Goud
+    const bones = ['🦴', '🥈', '🥇']; // White, Silver, Gold
 
     function updateBetDisplay() {
         const val = document.getElementById('betSlider').value;
@@ -74,11 +73,11 @@
         const reels = [document.getElementById('r1'), document.getElementById('r2'), document.getElementById('r3')];
         const betAmount = document.getElementById('betSlider').value;
         
-        // Check voor X1 Wallet of Backpack
+        // Detect X1 Wallet or Backpack
         const provider = window.x1 || window.backpack;
 
         if (!provider) {
-            alert("X1 Wallet of Backpack niet gevonden!");
+            alert("X1 Wallet or Backpack not found!");
             return;
         }
 
@@ -87,7 +86,6 @@
             status.innerText = "BALOO IS READY...";
             reels.forEach(r => r.classList.add('spinning'));
 
-            // Voorbereiding sessie (stabiliteit)
             if (provider.disconnect) await provider.disconnect().catch(() => {});
             await new Promise(r => setTimeout(r, 2000)); 
             await provider.connect();
@@ -111,7 +109,7 @@
 
         } catch (err) {
             reels.forEach(r => { r.classList.remove('spinning'); r.innerText = '❌'; });
-            status.innerText = "BALOO BUSY - WAIT 30S";
+            status.innerText = "BALOO BUSY - COOLDOWN ACTIVE";
         } finally {
             let countdown = 30;
             const timer = setInterval(() => {
