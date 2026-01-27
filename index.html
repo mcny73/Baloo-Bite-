@@ -3,42 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - V16 FINAL</title>
+    <title>BALOO BITE - JUNGLE ALPHA</title>
     <style>
-        body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #0a0a0a; border: 2px solid #444; border-radius: 20px; padding: 40px; text-align: center; width: 350px; }
-        .status-box { background: #001a00; color: #00ff00; padding: 15px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 30px; text-align: left; min-height: 100px; border-radius: 10px; }
-        .pot-val { font-size: 42px; color: #ffcc00; font-weight: bold; margin-bottom: 30px; }
-        .btn-chomp { background: #ff8c00; color: #fff; border: none; padding: 25px; width: 100%; cursor: pointer; font-weight: bold; font-size: 20px; border-radius: 12px; text-transform: uppercase; box-shadow: 0 5px 0 #b36200; }
-        .btn-chomp:disabled { background: #1a1a1a; color: #555; box-shadow: none; transform: translateY(5px); }
+        body { background: radial-gradient(circle at center, #1a2f1a 0%, #000 100%); color: #fff; font-family: 'Arial', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
+        .game-card { background: rgba(0, 0, 0, 0.85); border: 4px solid #3d2b1f; border-radius: 30px; padding: 40px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(0,255,0,0.15); position: relative; }
+        .pot-label { color: #8b4513; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
+        .pot-value { font-size: 56px; color: #ffcc00; font-weight: bold; margin: 10px 0; text-shadow: 0 0 20px rgba(255,204,0,0.4); }
+        .bear-display { font-size: 80px; margin: 30px 0; transition: transform 0.3s; }
+        .status-pill { background: #001a00; color: #00ff00; padding: 8px 15px; border-radius: 20px; font-size: 10px; font-family: monospace; display: inline-block; margin-bottom: 25px; border: 1px solid #00ff00; }
+        .btn-chomp { background: linear-gradient(#ff8c00, #e67e22); color: #fff; border: none; padding: 25px; width: 100%; cursor: pointer; font-weight: bold; font-size: 24px; border-radius: 18px; text-transform: uppercase; box-shadow: 0 8px 0 #b36200; transition: 0.1s; }
+        .btn-chomp:active { transform: translateY(4px); box-shadow: 0 4px 0 #b36200; }
+        .btn-chomp:disabled { background: #333; box-shadow: none; color: #666; cursor: not-allowed; transform: translateY(6px); }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <div class="status-box" id="status">V16_ENGINE: STANDBY<br>STABILITY_ENFORCED: YES</div>
-    <div class="pot-val">1.0 XNT</div>
-    <button class="btn-chomp" id="mainBtn" onclick="finalChomp()">Execute Hard Chomp</button>
+<div class="game-card">
+    <div class="status-pill" id="status">V16_STABILITY: ACTIVE</div>
+    <div class="pot-label">Honing Pot Jackpot</div>
+    <div class="pot-value">1.0 XNT</div>
+    
+    <div class="bear-display" id="bear">🐻</div>
+
+    <button class="btn-chomp" id="mainBtn" onclick="executeBalooBite()">Take a Bite!</button>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
-    async function finalChomp() {
+    async function executeBalooBite() {
         const log = document.getElementById('status');
         const btn = document.getElementById('mainBtn');
+        const bear = document.getElementById('bear');
         const provider = window.backpack;
 
         try {
             btn.disabled = true;
-            log.innerHTML = "ACTION: NUCLEAR RESET...<br>PLEASE WAIT 5 SECONDS.";
+            log.innerText = "RESETTING SESSION...";
+            bear.style.transform = "scale(1.2)";
             
-            // We dwingen een keiharde pauze af VOORDAT we de wallet zelfs maar aanraken
             if (provider.disconnect) await provider.disconnect().catch(() => {});
-            await new Promise(r => setTimeout(r, 5000)); 
+            await new Promise(r => setTimeout(r, 4000)); 
             
-            log.innerHTML = "ACTION: OPENING FRESH SESSION...";
+            log.innerText = "OPENING WALLET...";
             await provider.connect();
 
+            log.innerText = "BITING THE POT...";
             const tx = new solanaWeb3.Transaction().add(
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: provider.publicKey,
@@ -47,15 +56,14 @@
                 })
             );
 
-            log.innerHTML = "ACTION: WAITING FOR APPROVAL...";
             const result = await provider.signAndSendTransaction(tx);
-            log.innerHTML = "VERIFIED SUCCESS!<br>SIG: " + result.signature.toString().substring(0, 20);
+            log.innerText = "SUCCESS! SIG: " + result.signature.toString().substring(0, 12);
+            bear.innerText = "😋";
 
         } catch (err) {
-            console.error(err);
-            log.innerHTML = "SYSTEM LOCK: WALLET STILL BUSY.<br>F5 REFRESH RECOMMENDED.";
+            log.innerText = "BEAR IS FULL - WAIT!";
+            bear.innerText = "😴";
         } finally {
-            // De timer is nu 30 seconden voor absolute zekerheid
             let countdown = 30;
             const timer = setInterval(() => {
                 btn.innerText = `READY IN ${countdown}S`;
@@ -63,7 +71,9 @@
                 if (countdown < 0) {
                     clearInterval(timer);
                     btn.disabled = false;
-                    btn.innerText = "Execute Hard Chomp";
+                    btn.innerText = "Take a Bite!";
+                    bear.innerText = "🐻";
+                    bear.style.transform = "scale(1)";
                 }
             }, 1000);
         }
