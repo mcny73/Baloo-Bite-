@@ -2,94 +2,74 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - PRODUCTION READY</title>
+    <title>BALOO BITE - FINAL VERSION</title>
     <style>
-        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: #111; border: 2px solid #ff8c00; border-radius: 20px; padding: 40px; text-align: center; width: 340px; box-shadow: 0 0 30px rgba(255,140,0,0.2); }
-        #status { font-family: monospace; font-size: 11px; color: #00ffcc; margin-bottom: 20px; min-height: 45px; background: #000; padding: 12px; border: 1px solid #333; border-radius: 8px; text-align: left; overflow-wrap: break-word; }
-        .pot-ui { font-size: 42px; font-weight: bold; color: #ffcc00; margin-bottom: 5px; }
-        .btn-chomp { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 12px; color: #fff; font-size: 24px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: transform 0.1s; }
-        .btn-chomp:active { transform: scale(0.95); }
+        #status { font-family: monospace; font-size: 11px; color: #00ffcc; margin-bottom: 20px; min-height: 45px; background: #000; padding: 12px; border: 1px solid #333; border-radius: 8px; text-align: left; word-break: break-all; }
+        .pot-display { font-size: 42px; font-weight: bold; color: #ffcc00; margin-bottom: 5px; }
+        .chomp-btn { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 12px; color: #fff; font-size: 24px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div id="status">SYSTEM_STATUS: READY_TO_CHOMP</div>
-    <div class="pot-ui" id="pot-display">0.00</div>
+    <div id="status">SYSTEM_STATUS: READY</div>
+    <div class="pot-display" id="balance">0.00</div>
     <div style="font-size: 12px; color: #888; margin-bottom: 25px;">XNT IN THE POT</div>
-    <button class="btn-chomp" onclick="processBite()">CHOMP!</button>
+    <button class="chomp-btn" onclick="startChomp()">CHOMP!</button>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
-
 <script>
-    // --- CONFIGURATION ---
     const DESTINATION = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-    const RPC_ENDPOINT = "https://testnet-rpc.x1.xyz";
+    const RPC_URL = "https://testnet-rpc.x1.xyz";
 
-    // --- REFRESH POT BALANCE ---
-    async function updatePot() {
+    async function refreshPot() {
         try {
-            const connection = new solanaWeb3.Connection(RPC_ENDPOINT, "confirmed");
-            const balance = await connection.getBalance(new solanaWeb3.PublicKey(DESTINATION));
-            document.getElementById('pot-display').innerText = (balance / 1e9).toFixed(2);
-        } catch (e) {
-            console.log("RPC_FETCH_SILENT_ERROR");
-        }
+            const conn = new solanaWeb3.Connection(RPC_URL, "confirmed");
+            const bal = await conn.getBalance(new solanaWeb3.PublicKey(DESTINATION));
+            document.getElementById('balance').innerText = (bal / 1e9).toFixed(2);
+        } catch (e) { console.log("SYNC_ERROR"); }
     }
 
-    // --- MAIN GAME LOGIC ---
-    async function processBite() {
+    async function startChomp() {
         const provider = window.x1 || window.solana;
-        const log = document.getElementById('status');
-
-        if (!provider) {
-            alert("X1 WALLET NOT FOUND. PLEASE USE EDGE OR CHROME WITH X1 EXTENSION.");
-            return;
-        }
+        if (!provider) { alert("WALLET NOT FOUND"); return; }
 
         try {
-            log.innerText = "ACTION: CONNECTING_WALLET...";
-            const connectionResponse = await provider.connect();
-            const userPubkey = connectionResponse.publicKey;
-
-            log.innerText = "ACTION: FETCHING_NETWORK_HASH...";
-            const connection = new solanaWeb3.Connection(RPC_ENDPOINT, "confirmed");
+            document.getElementById('status').innerText = "CONNECTING...";
+            const resp = await provider.connect();
+            
+            document.getElementById('status').innerText = "GETTING_BLOCKHASH...";
+            const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
             const { blockhash } = await connection.getLatestBlockhash('finalized');
 
             const transaction = new solanaWeb3.Transaction().add(
                 solanaWeb3.SystemProgram.transfer({
-                    fromPubkey: userPubkey,
+                    fromPubkey: resp.publicKey,
                     toPubkey: new solanaWeb3.PublicKey(DESTINATION),
-                    lamports: 1.0 * 1e9 // 1.0 XNT per Bite
+                    lamports: 1.0 * 1000000000
                 })
             );
-
             transaction.recentBlockhash = blockhash;
-            transaction.feePayer = userPubkey;
+            transaction.feePayer = resp.publicKey;
 
-            log.innerText = "ACTION: AWAITING_SIGNATURE...";
-            const signedResult = await provider.signAndSendTransaction(transaction);
+            document.getElementById('status').innerText = "AWAITING_APPROVAL...";
+            const result = await provider.signAndSendTransaction(transaction);
             
-            // Fixed Signature Handling (prevents substring error)
-            const txId = signedResult.signature || signedResult;
-            log.innerText = "SUCCESS! TX_ID: " + txId.toString().substring(0, 12);
+            // Safe Signature Extraction
+            const signature = result.signature || (typeof result === 'string' ? result : "SUCCESS");
+            document.getElementById('status').innerText = "SUCCESS! ID: " + signature.toString().substring(0, 10);
             
-            alert("BITE SUCCESSFUL! BALOO IS HAPPY.");
-            setTimeout(updatePot, 3000);
-
+            alert("BITE SUCCESSFUL!");
+            refreshPot();
         } catch (err) {
-            log.innerText = "ERROR: " + err.message.toUpperCase();
-            console.error(err);
+            document.getElementById('status').innerText = "FAILED: " + err.message.toUpperCase();
         }
     }
 
-    // Initialize Pot on Load
-    window.onload = updatePot;
-    setInterval(updatePot, 20000); // Auto-refresh every 20s
+    window.onload = refreshPot;
 </script>
-
 </body>
 </html>
