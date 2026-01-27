@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - ALPHA ROTTWEILER</title>
+    <title>BALOO BITE - V29 TIGHT GRIP</title>
     <style>
         body { background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
         .game-card { background: #0a0a0a; border: 5px solid #ffd700; border-radius: 25px; padding: 30px; text-align: center; width: 400px; box-shadow: 0 0 80px rgba(255,215,0,0.15); }
@@ -22,13 +22,15 @@
         .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 26px; border-radius: 15px; text-transform: uppercase; transition: 0.2s; box-shadow: 0 6px 0 #665200; }
         .btn-bite:active { transform: translateY(3px); box-shadow: 0 3px 0 #665200; }
         .btn-bite:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
-        .btn-free { background: linear-gradient(#fff, #ccc) !important; color: #000 !important; box-shadow: 0 6px 0 #666 !important; animation: pulse 1s infinite; }
-
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-        .spinning { animation: spin 0.15s linear infinite; }
-        @keyframes spin { 0% { transform: translateY(-20px); } 50% { transform: translateY(20px); } 100% { transform: translateY(-20px); } }
         
-        #status { font-family: monospace; font-size: 11px; color: #666; margin-top: 15px; height: 20px; }
+        /* Speciale look voor de Free Spin knop */
+        .btn-free { background: linear-gradient(#fff, #f0f0f0) !important; color: #000 !important; box-shadow: 0 6px 0 #999 !important; border: 2px solid #ffd700 !important; animation: pulse 0.8s infinite; }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+        .spinning { animation: spin 0.1s linear infinite; }
+        @keyframes spin { 0% { transform: translateY(-10px); } 50% { transform: translateY(10px); } 100% { transform: translateY(-10px); } }
+        
+        #status { font-family: monospace; font-size: 11px; color: #666; margin-top: 15px; height: 20px; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -59,7 +61,7 @@
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
-    const BONES = ['🦴', '🥈', '🥇']; // 60%, 30%, 10%
+    const BONES = ['🦴', '🥈', '🥇'];
     let isFreeSpin = false;
 
     function updateBet() {
@@ -69,9 +71,9 @@
     function getResult() {
         const roll = () => {
             const r = Math.random();
-            if (r < 0.1) return '🥇';
-            if (r < 0.4) return '🥈';
-            return '🦴';
+            if (r < 0.1) return '🥇'; // 10% kans op goud per rol
+            if (r < 0.4) return '🥈'; // 30% kans op zilver
+            return '🦴';               // 60% kans op wit
         };
         return [roll(), roll(), roll()];
     }
@@ -89,13 +91,12 @@
         reels.forEach(r => { r.classList.add('spinning'); r.classList.remove('win'); });
 
         try {
-            // Stability reset
-            if (provider.disconnect) await provider.disconnect().catch(() => {});
-            await new Promise(r => setTimeout(r, 2000));
-            await provider.connect();
-
-            // Only charge if NOT a free spin
+            // Betaal-fase (alleen als het GEEN free spin is)
             if (!isFreeSpin) {
+                if (provider.disconnect) await provider.disconnect().catch(() => {});
+                await new Promise(r => setTimeout(r, 2000));
+                await provider.connect();
+
                 const wager = document.getElementById('betRange').value;
                 const tx = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
@@ -109,22 +110,33 @@
 
             const res = getResult();
             const goldCount = res.filter(b => b === '🥇').length;
+            const silverCount = res.filter(b => b === '🥈').length;
+            const whiteCount = res.filter(b => b === '🦴').length;
             
-            // Stop animation & Show results
+            // Resultaten tonen
             reels.forEach((r, i) => {
                 r.classList.remove('spinning');
                 r.innerText = res[i];
             });
 
-            // Logic Check
-            if (res[0] === '🥇' && res[1] === '🥇' && res[2] === '🥇') {
+            // LOGICA CHECK V29 (Strenge controle op Free Spins)
+            const hasMatchOfTwo = (res[0] === res[1] || res[1] === res[2] || res[0] === res[2]);
+            const barkSuccess = Math.random() < 0.25; // Slechts 25% van de matches geeft een Free Spin
+
+            if (goldCount === 3) {
                 status.innerText = "ALPHA BITE! JACKPOT!";
                 reels.forEach(r => r.classList.add('win'));
                 isFreeSpin = false;
             } else if (goldCount === 2) {
                 status.innerText = "GOLD RUSH! 5X WIN!";
                 isFreeSpin = false;
-            } else if (res[0] === res[1] || res[1] === res[2] || res[0] === res[2]) {
+            } else if (silverCount === 3) {
+                status.innerText = "SILVER CRUNCH! 3X WIN!";
+                isFreeSpin = false;
+            } else if (whiteCount === 3) {
+                status.innerText = "WHITE SNACK! 1.5X WIN!";
+                isFreeSpin = false;
+            } else if (hasMatchOfTwo && barkSuccess) {
                 status.innerText = "FRIENDLY BARK! FREE SPIN!";
                 isFreeSpin = true;
             } else {
@@ -133,8 +145,8 @@
             }
 
         } catch (e) {
-            status.innerText = "SESSION BUSY - WAIT 30S";
-            reels.forEach(r => { r.classList.remove('spinning'); r.innerText = '❌'; });
+            status.innerText = "ERROR - TRY AGAIN";
+            reels.forEach(r => { r.classList.remove('spinning'); r.innerText = '🦴'; });
             isFreeSpin = false;
         } finally {
             updateButtonState();
@@ -150,7 +162,7 @@
         } else {
             btn.innerText = "WAITING...";
             btn.classList.remove('btn-free');
-            let cd = 30;
+            let cd = 30; // De verplichte cooldown voor de wallet
             const t = setInterval(() => {
                 btn.innerText = `WAIT ${cd}S`;
                 if (cd-- <= 0) {
