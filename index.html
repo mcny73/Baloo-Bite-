@@ -3,82 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - V10 ULTIMATE</title>
+    <title>BALOO BITE - ULTIMATE BUNKER v11</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-        .card { background: #0a0a0a; border: 2px solid #333; border-radius: 15px; padding: 30px; text-align: center; width: 350px; box-shadow: 0 0 30px rgba(255,140,0,0.1); }
-        .status-box { background: #001a00; color: #00ff00; padding: 15px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 25px; text-align: left; min-height: 85px; word-break: break-all; line-height: 1.4; }
-        .btn-chomp { background: #ff8c00; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 8px; text-transform: uppercase; transition: transform 0.1s; }
-        .btn-chomp:disabled { background: #222; color: #666; cursor: not-allowed; }
-        .btn-chomp:active { transform: scale(0.98); }
+        .card { background: #0a0a0a; border: 2px solid #444; border-radius: 15px; padding: 30px; text-align: center; width: 350px; box-shadow: 0 0 40px rgba(255,140,0,0.15); }
+        .status-box { background: #001a00; color: #00ff00; padding: 15px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 25px; text-align: left; min-height: 90px; word-break: break-all; line-height: 1.4; border-radius: 5px; }
+        .btn-chomp { background: #ff8c00; color: #fff; border: none; padding: 22px; width: 100%; cursor: pointer; font-weight: bold; font-size: 20px; border-radius: 10px; text-transform: uppercase; transition: all 0.2s; box-shadow: 0 4px 0 #b36200; }
+        .btn-chomp:disabled { background: #1a1a1a; color: #444; cursor: not-allowed; box-shadow: none; transform: translateY(4px); }
+        .btn-chomp:active { transform: translateY(2px); box-shadow: 0 2px 0 #b36200; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div class="status-box" id="status">V10_ENGINE: ONLINE<br>STABILITY: ULTIMATE_MAX</div>
-    <div style="font-size: 28px; color: #ffcc00; margin-bottom: 25px; font-weight: bold;">1.0 XNT</div>
-    <button class="btn-chomp" id="mainBtn" onclick="executeV10Chomp()">Execute Hard Chomp</button>
+    <div class="status-box" id="status">BUNKER_V11: ARMED<br>STABILITY_ENFORCED: YES</div>
+    <div style="font-size: 32px; color: #ffcc00; margin-bottom: 25px; font-weight: bold; letter-spacing: 2px;">1.0 XNT</div>
+    <button class="btn-chomp" id="mainBtn" onclick="executeBunkerChomp()">Execute Hard Chomp</button>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 
 <script>
-    async function executeV10Chomp() {
+    async function executeBunkerChomp() {
         const log = document.getElementById('status');
         const btn = document.getElementById('mainBtn');
         const provider = window.backpack;
 
         if (!provider) {
-            log.innerHTML = "ERROR: BACKPACK NOT DETECTED";
+            log.innerHTML = "CRITICAL:<br>BACKPACK WALLET NOT FOUND";
             return;
         }
 
         try {
             btn.disabled = true;
-            log.innerHTML = "STATUS: REFRESHING HANDSHAKE...";
+            log.innerHTML = "ACTION: CLEARING OLD SESSION...";
             
-            // Harde reset van de sessie voor elke klik om 'Plugin Closed' te voorkomen
-            if (provider.disconnect) await provider.disconnect().catch(() => {});
-            await new Promise(r => setTimeout(r, 1000)); // Rustmoment voor de browser extensie
+            // Geforceerde disconnect om 'Plugin Closed' te resetten
+            if (provider.disconnect) {
+                await provider.disconnect().catch(() => {});
+            }
+            
+            // Lange pauze om de wallet-extensie ademruimte te geven
+            await new Promise(r => setTimeout(r, 1200)); 
+            
+            log.innerHTML = "ACTION: RE-ESTABLISHING SECURE CONNECTION...";
             await provider.connect();
 
-            log.innerHTML = "STATUS: BUILDING SECURE TX...";
-            
             const transaction = new solanaWeb3.Transaction().add(
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: provider.publicKey,
                     toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
-                    lamports: 1.0 * 1e9 
+                    lamports: 1000000000 
                 })
             );
 
-            log.innerHTML = "STATUS: AWAITING APPROVAL...<br>CHECK WALLET POPUP NOW";
+            log.innerHTML = "ACTION: AWAITING WALLET APPROVAL...<br>OPEN BACKPACK NOW!";
             
-            // Wallet regelt de blockhash zelf voor maximale stabiliteit
             const result = await provider.signAndSendTransaction(transaction);
             const sig = result.signature || result;
 
-            log.innerHTML = "VERIFIED SUCCESS!<br>SIG: " + sig.toString().substring(0, 22);
+            log.innerHTML = "SUCCESS: VERIFIED ON-CHAIN<br>SIG: " + sig.toString().substring(0, 22);
 
         } catch (err) {
             console.error(err);
-            if (err.message.includes('closed')) {
-                log.innerHTML = "INTERRUPT: PLUGIN_BUSY<br>AUTO-RESETTING... WAIT FOR TIMER.";
+            if (err.message.includes('closed') || err.message.includes('disconnected')) {
+                log.innerHTML = "RECOVERY: WALLET REJECTED SPEED.<br>COOLDOWN INITIATED...";
             } else {
-                log.innerHTML = "ERROR: " + err.message.toUpperCase();
+                log.innerHTML = "INTERRUPT: " + err.message.toUpperCase();
             }
         } finally {
-            // Verlengde timer voor absolute stabiliteit bij herhaaldelijk klikken
-            let countdown = 6;
+            // De 'Nucleaire' 7-seconden timer
+            let countdown = 7;
             const timer = setInterval(() => {
-                btn.innerText = `NEXT CHOMP IN ${countdown}s`;
+                btn.innerText = `READY IN ${countdown}s`;
                 countdown--;
                 if (countdown < 0) {
                     clearInterval(timer);
                     btn.disabled = false;
                     btn.innerText = "Execute Hard Chomp";
-                    if(!log.innerHTML.includes('SUCCESS')) log.innerHTML = "V10_ENGINE: READY";
+                    if(!log.innerHTML.includes('SUCCESS')) log.innerHTML = "BUNKER: READY_FOR_CMD";
                 }
             }, 1000);
         }
