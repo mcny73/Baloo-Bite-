@@ -3,48 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - V13 FINAL</title>
+    <title>BALOO BITE - V15 IRONCLAD</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #0a0a0a; border: 2px solid #555; border-radius: 15px; padding: 30px; text-align: center; width: 350px; }
-        .status-box { background: #001a00; color: #00ff00; padding: 15px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 25px; text-align: left; min-height: 95px; word-break: break-all; line-height: 1.4; }
-        .btn-chomp { background: #ff8c00; color: #fff; border: none; padding: 22px; width: 100%; cursor: pointer; font-weight: bold; font-size: 20px; border-radius: 10px; text-transform: uppercase; }
-        .btn-chomp:disabled { background: #1a1a1a; color: #444; cursor: not-allowed; }
+        .card { background: #0a0a0a; border: 2px solid #444; border-radius: 20px; padding: 40px; text-align: center; width: 350px; box-shadow: 0 0 40px rgba(255,140,0,0.1); }
+        .status-box { background: #001a00; color: #00ff00; padding: 15px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 30px; text-align: left; min-height: 100px; border-radius: 10px; }
+        .pot-val { font-size: 42px; color: #ffcc00; font-weight: bold; margin-bottom: 30px; }
+        .btn-chomp { background: #ff8c00; color: #fff; border: none; padding: 25px; width: 100%; cursor: pointer; font-weight: bold; font-size: 20px; border-radius: 12px; text-transform: uppercase; box-shadow: 0 5px 0 #b36200; }
+        .btn-chomp:disabled { background: #1a1a1a; color: #555; box-shadow: none; transform: translateY(5px); }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div class="status-box" id="status">V13_ENGINE: READY<br>STABILITY: MASTER_MODE</div>
-    <div style="font-size: 32px; color: #ffcc00; margin-bottom: 25px; font-weight: bold;">1.0 XNT</div>
-    <button class="btn-chomp" id="mainBtn" onclick="executeV13Chomp()">Execute Hard Chomp</button>
+    <div class="status-box" id="status">V15_ENGINE: STANDBY<br>READY FOR DEEP STRESS TEST</div>
+    <div class="pot-val">1.0 XNT</div>
+    <button class="btn-chomp" id="mainBtn" onclick="ironcladChomp()">Execute Hard Chomp</button>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
-
 <script>
-    async function executeV13Chomp() {
+    async function ironcladChomp() {
         const log = document.getElementById('status');
         const btn = document.getElementById('mainBtn');
         const provider = window.backpack;
 
         try {
             btn.disabled = true;
-            log.innerHTML = "STEP 1: CLEANING PREVIOUS SESSION...";
+            log.innerHTML = "PHASE 1: NUCLEAR SESSION RESET...";
             
-            // Forceer een keiharde disconnect om de 'Plugin Closed' te resetten
-            if (provider.disconnect) {
-                await provider.disconnect().catch(() => {});
-            }
+            // We verbreken de verbinding volledig om de cache van de plugin te legen
+            if (provider.disconnect) await provider.disconnect().catch(() => {});
             
-            // We geven de wallet nu 2 volle seconden om af te koelen voor we verbinden
-            await new Promise(r => setTimeout(r, 2000)); 
+            // We wachten nu 3 seconden in totale stilte voor we de wallet weer aanraken
+            await new Promise(r => setTimeout(r, 3000)); 
             
-            log.innerHTML = "STEP 2: INITIATING FRESH HANDSHAKE...";
+            log.innerHTML = "PHASE 2: FRESH HANDSHAKE...";
             await provider.connect();
 
-            log.innerHTML = "STEP 3: SIGNING TRANSACTION...";
-            const transaction = new solanaWeb3.Transaction().add(
+            log.innerHTML = "PHASE 3: BITING ON-CHAIN...";
+            const tx = new solanaWeb3.Transaction().add(
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: provider.publicKey,
                     toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
@@ -52,17 +50,16 @@
                 })
             );
 
-            const result = await provider.signAndSendTransaction(transaction);
-            log.innerHTML = "VERIFIED SUCCESS!<br>SIG: " + result.signature.toString().substring(0, 22);
+            const result = await provider.signAndSendTransaction(tx);
+            log.innerHTML = "SUCCESS: VERIFIED<br>SIG: " + result.signature.toString().substring(0, 20);
 
         } catch (err) {
-            console.error(err);
-            log.innerHTML = "WALLET BUSY: STABILIZING...<br>PLEASE WAIT FOR THE TIMER.";
+            log.innerHTML = "SYSTEM LOCK: WALLET OVERLOAD<br>DUE TO SECURITY PROTOCOL.";
         } finally {
-            // De 15-seconden 'God-mode' timer om ELKE fout te voorkomen
-            let countdown = 15;
+            // We gaan naar 20 seconden pauze om de wallet 100% rust te geven
+            let countdown = 20;
             const timer = setInterval(() => {
-                btn.innerText = `COOLDOWN: ${countdown}s`;
+                btn.innerText = `RECOVERING (${countdown}s)`;
                 countdown--;
                 if (countdown < 0) {
                     clearInterval(timer);
