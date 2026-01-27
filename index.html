@@ -1,102 +1,68 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - V29 TIGHT GRIP</title>
-    <style>
-        body { background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-        .game-card { background: #0a0a0a; border: 5px solid #ffd700; border-radius: 25px; padding: 30px; text-align: center; width: 400px; box-shadow: 0 0 80px rgba(255,215,0,0.15); }
-        
-        .pot-container { background: #111; border: 2px solid #333; border-radius: 15px; padding: 10px; margin-bottom: 20px; }
-        .pot-label { color: #ffd700; font-size: 12px; letter-spacing: 2px; }
-        .pot-value { font-size: 45px; color: #fff; text-shadow: 0 0 15px #ffd700; }
+<style>
+    /* De visuele rollen fix */
+    .reel { 
+        width: 100px; 
+        height: 120px; 
+        background: #1a1a1a; 
+        border-radius: 12px; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        font-size: 55px; 
+        border: 3px solid #333; 
+        position: relative;
+        overflow: hidden; /* Zorgt dat we alleen het middelste bot zien */
+    }
 
-        .slot-machine { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
-        .reel { width: 100px; height: 120px; background: #1a1a1a; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 55px; border: 3px solid #333; transition: 0.3s; }
-        .reel.win { border-color: #ffd700; box-shadow: 0 0 20px #ffd700; transform: scale(1.05); }
+    /* De animatie voor het rollen */
+    .reel-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: absolute;
+        top: 0;
+        transition: transform 0.5s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+    }
 
-        .bet-container { background: #111; padding: 15px; border-radius: 15px; margin: 20px 0; }
-        .bet-slider { width: 100%; accent-color: #ffd700; cursor: pointer; }
-        
-        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 26px; border-radius: 15px; text-transform: uppercase; transition: 0.2s; box-shadow: 0 6px 0 #665200; }
-        .btn-bite:active { transform: translateY(3px); box-shadow: 0 3px 0 #665200; }
-        .btn-bite:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
-        
-        /* Speciale look voor de Free Spin knop */
-        .btn-free { background: linear-gradient(#fff, #f0f0f0) !important; color: #000 !important; box-shadow: 0 6px 0 #999 !important; border: 2px solid #ffd700 !important; animation: pulse 0.8s infinite; }
+    .spinning .reel-container {
+        animation: roll-animation 0.1s linear infinite;
+    }
 
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
-        .spinning { animation: spin 0.1s linear infinite; }
-        @keyframes spin { 0% { transform: translateY(-10px); } 50% { transform: translateY(10px); } 100% { transform: translateY(-10px); } }
-        
-        #status { font-family: monospace; font-size: 11px; color: #666; margin-top: 15px; height: 20px; text-transform: uppercase; }
-    </style>
-</head>
-<body>
+    @keyframes roll-animation {
+        0% { transform: translateY(-0%); }
+        100% { transform: translateY(-50%); }
+    }
+</style>
 
-<div class="game-card">
-    <div class="pot-container">
-        <div class="pot-label">LIVE JACKPOT (XNT)</div>
-        <div class="pot-value" id="potDisplay">100.00</div>
-    </div>
-    
-    <div class="slot-machine">
-        <div class="reel" id="re1">🦴</div>
-        <div class="reel" id="re2">🦴</div>
-        <div class="reel" id="re3">🦴</div>
-    </div>
-
-    <div class="bet-container">
-        <div style="display:flex; justify-content: space-between; margin-bottom: 5px;">
-            <span style="font-size:12px; color:#888;">WAGER</span>
-            <span id="betVal" style="color:#ffd700; font-weight:bold;">1.00 XNT</span>
-        </div>
-        <input type="range" min="0.25" max="2.50" step="0.25" value="1.00" class="bet-slider" id="betRange" oninput="updateBet()">
-    </div>
-
-    <button class="btn-bite" id="mainBtn" onclick="handleBite()">BITE THE BONE</button>
-    <div id="status">READY FOR ACTION</div>
+<div class="slot-machine">
+    <div class="reel" id="re1"><div class="reel-container" id="con1">🦴<br>🥈<br>🥇<br>🦴</div></div>
+    <div class="reel" id="re2"><div class="reel-container" id="con2">🥈<br>🦴<br>🥇<br>🥈</div></div>
+    <div class="reel" id="re3"><div class="reel-container" id="con3">🥇<br>🥈<br>🦴<br>🥇</div></div>
 </div>
 
-<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
-    const BONES = ['🦴', '🥈', '🥇'];
-    let isFreeSpin = false;
-
-    function updateBet() {
-        document.getElementById('betVal').innerText = parseFloat(document.getElementById('betRange').value).toFixed(2) + " XNT";
-    }
-
-    function getResult() {
-        const roll = () => {
-            const r = Math.random();
-            if (r < 0.1) return '🥇'; // 10% kans op goud per rol
-            if (r < 0.4) return '🥈'; // 30% kans op zilver
-            return '🦴';               // 60% kans op wit
-        };
-        return [roll(), roll(), roll()];
-    }
-
     async function handleBite() {
         const btn = document.getElementById('mainBtn');
         const status = document.getElementById('status');
         const reels = [document.getElementById('re1'), document.getElementById('re2'), document.getElementById('re3')];
+        const containers = [document.getElementById('con1'), document.getElementById('con2'), document.getElementById('con3')];
         const provider = window.x1 || window.backpack;
 
         if (!provider) return alert("Install X1 Wallet!");
 
         btn.disabled = true;
         status.innerText = "BALOO IS SNIFFING...";
-        reels.forEach(r => { r.classList.add('spinning'); r.classList.remove('win'); });
+        
+        // Start het rollen
+        reels.forEach(r => {
+            r.classList.add('spinning');
+            r.classList.remove('win');
+        });
 
         try {
-            // Betaal-fase (alleen als het GEEN free spin is)
             if (!isFreeSpin) {
-                if (provider.disconnect) await provider.disconnect().catch(() => {});
-                await new Promise(r => setTimeout(r, 2000));
+                // Wallet logica blijft hetzelfde...
                 await provider.connect();
-
                 const wager = document.getElementById('betRange').value;
                 const tx = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
@@ -109,70 +75,17 @@
             }
 
             const res = getResult();
-            const goldCount = res.filter(b => b === '🥇').length;
-            const silverCount = res.filter(b => b === '🥈').length;
-            const whiteCount = res.filter(b => b === '🦴').length;
-            
-            // Resultaten tonen
-            reels.forEach((r, i) => {
-                r.classList.remove('spinning');
-                r.innerText = res[i];
-            });
 
-            // LOGICA CHECK V29 (Strenge controle op Free Spins)
-            const hasMatchOfTwo = (res[0] === res[1] || res[1] === res[2] || res[0] === res[2]);
-            const barkSuccess = Math.random() < 0.25; // Slechts 25% van de matches geeft een Free Spin
-
-            if (goldCount === 3) {
-                status.innerText = "ALPHA BITE! JACKPOT!";
-                reels.forEach(r => r.classList.add('win'));
-                isFreeSpin = false;
-            } else if (goldCount === 2) {
-                status.innerText = "GOLD RUSH! 5X WIN!";
-                isFreeSpin = false;
-            } else if (silverCount === 3) {
-                status.innerText = "SILVER CRUNCH! 3X WIN!";
-                isFreeSpin = false;
-            } else if (whiteCount === 3) {
-                status.innerText = "WHITE SNACK! 1.5X WIN!";
-                isFreeSpin = false;
-            } else if (hasMatchOfTwo && barkSuccess) {
-                status.innerText = "FRIENDLY BARK! FREE SPIN!";
-                isFreeSpin = true;
-            } else {
-                status.innerText = "NO LUCK THIS TIME";
-                isFreeSpin = false;
+            // Stop animatie met vertraging per rol voor casino-effect
+            for (let i = 0; i < reels.length; i++) {
+                await new Promise(r => setTimeout(r, 400)); // Delay per rol
+                reels[i].classList.remove('spinning');
+                containers[i].innerHTML = res[i]; // Zet het winnende bot vast
             }
 
+            // ... (rest van de win-logica uit V29)
         } catch (e) {
-            status.innerText = "ERROR - TRY AGAIN";
-            reels.forEach(r => { r.classList.remove('spinning'); r.innerText = '🦴'; });
-            isFreeSpin = false;
-        } finally {
-            updateButtonState();
-        }
-    }
-
-    function updateButtonState() {
-        const btn = document.getElementById('mainBtn');
-        if (isFreeSpin) {
-            btn.innerText = "FREE BARK!";
-            btn.classList.add('btn-free');
-            btn.disabled = false;
-        } else {
-            btn.innerText = "WAITING...";
-            btn.classList.remove('btn-free');
-            let cd = 30; // De verplichte cooldown voor de wallet
-            const t = setInterval(() => {
-                btn.innerText = `WAIT ${cd}S`;
-                if (cd-- <= 0) {
-                    clearInterval(t);
-                    btn.disabled = false;
-                    btn.innerText = "BITE THE BONE";
-                }
-            }, 1000);
+            // Foutafhandeling...
         }
     }
 </script>
-</body>
-</html>
