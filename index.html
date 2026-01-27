@@ -2,59 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - DIRECT EXECUTION</title>
+    <title>BALOO BITE - FINAL BYPASS</title>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: #111; border: 2px solid #ff8c00; border-radius: 20px; padding: 40px; text-align: center; width: 340px; }
-        #status { font-family: monospace; font-size: 11px; color: #00ffcc; margin-bottom: 20px; min-height: 45px; background: #000; padding: 12px; border: 1px solid #333; border-radius: 8px; text-align: left; word-break: break-all; }
-        .btn-main { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 12px; color: #fff; font-size: 24px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        #status { font-family: monospace; font-size: 11px; color: #00ffcc; margin-bottom: 20px; min-height: 45px; background: #000; padding: 12px; border: 1px solid #333; border-radius: 8px; text-align: left; }
+        .btn { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 12px; color: #fff; font-size: 24px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div id="status">ACTION: WAITING_FOR_CHOMP</div>
-        <div style="font-size: 28px; color: #ffcc00; margin-bottom: 20px;">1.0 XNT TEST</div>
-        <button class="btn-main" onclick="executeBite()">CHOMP!</button>
+        <div id="status">BYPASS_MODE: READY</div>
+        <div style="font-size: 28px; color: #ffcc00; margin-bottom: 20px;">1.0 XNT</div>
+        <button class="btn" onclick="chomp()">CHOMP!</button>
     </div>
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
-        const DEST = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        const RPC = "https://testnet-rpc.x1.xyz";
-
-        async function executeBite() {
+        async function chomp() {
             const provider = window.x1 || window.solana;
             const log = document.getElementById('status');
             if (!provider) { alert("X1_WALLET_NOT_FOUND"); return; }
 
             try {
-                log.innerText = "ACTION: INITIATING_WALLET...";
-                const connection = await provider.connect();
-                
-                log.innerText = "ACTION: REQUESTING_HASH_FROM_CHAIN...";
-                // We fetch the hash ONLY when you click, preventing background fetch blocks
-                const solanaConn = new solanaWeb3.Connection(RPC, "confirmed");
-                const { blockhash } = await solanaConn.getLatestBlockhash('finalized');
+                log.innerText = "ACTION: CONNECTING...";
+                const { publicKey } = await provider.connect();
 
+                // WE DO NOT FETCH HERE. WE LET THE WALLET HANDLE THE RPC.
                 const tx = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
-                        fromPubkey: connection.publicKey,
-                        toPubkey: new solanaWeb3.PublicKey(DEST),
+                        fromPubkey: publicKey,
+                        toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
                         lamports: 1.0 * 1e9
                     })
                 );
-                tx.recentBlockhash = blockhash;
-                tx.feePayer = connection.publicKey;
 
-                log.innerText = "ACTION: OPENING_WALLET_APPROVAL...";
+                log.innerText = "ACTION: HANDING_TO_WALLET...";
+                
+                // signAndSendTransaction usually fetches its own blockhash if none is provided
                 const result = await provider.signAndSendTransaction(tx);
                 
-                // Final fix for the signature error
-                const sigId = result.signature ? result.signature : result;
-                log.innerText = "SUCCESS: " + sigId.toString().substring(0, 15);
+                const sig = result.signature || result;
+                log.innerText = "SUCCESS: " + sig.toString().substring(0, 10);
                 alert("BITE SUCCESSFUL!");
             } catch (err) {
-                log.innerText = "CRITICAL_ERROR: " + err.message.toUpperCase();
+                log.innerText = "FAILED: " + err.message.toUpperCase();
+                // If it fails, we try one fallback with a hardcoded connection
+                if(err.message.includes('fetch')) {
+                    log.innerText = "ATTEMPTING_RPC_FALLBACK...";
+                    const conn = new solanaWeb3.Connection("https://testnet-rpc.x1.xyz", "confirmed");
+                    const { blockhash } = await conn.getLatestBlockhash();
+                    tx.recentBlockhash = blockhash;
+                    tx.feePayer = publicKey;
+                    const sig2 = await provider.signAndSendTransaction(tx);
+                    log.innerText = "SUCCESS_FALLBACK: " + sig2.substring(0,10);
+                }
             }
         }
     </script>
