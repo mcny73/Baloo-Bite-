@@ -1,30 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BALOO BITE - FINAL TEST</title>
+    <style>
+        body { background: #0a0a0a; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #111; border: 2px solid #ff8c00; border-radius: 25px; padding: 40px; text-align: center; width: 350px; }
+        #status { font-family: monospace; font-size: 11px; color: #00ffcc; margin-bottom: 20px; min-height: 40px; background: #000; padding: 10px; border-radius: 8px; }
+        .btn { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 15px; color: white; font-size: 22px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>BALOO BITE</h2>
+    <div id="status">KLIK OP CHOMP OM TE STARTEN</div>
+    <div style="margin: 20px 0; font-size: 24px;">TEST: 1.0 XNT</div>
+    <button class="btn" onclick="play()">CHOMP!</button>
+</div>
+
+<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
-    // Meerdere ingangen naar de blockchain om blokkades te omzeilen
-    const RPC_NODES = [
-        "https://testnet-rpc.x1.xyz",
-        "https://x1-testnet.blockpi.network/v1/rpc/public",
-        "https://rpc-testnet.x1.xyz"
-    ];
+    const TARGET = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
+    const RPC = "https://testnet-rpc.x1.xyz";
 
-    let nodeIndex = 0;
-    let connection = new solanaWeb3.Connection(RPC_NODES[0], "confirmed");
+    async function play() {
+        const provider = window.x1 || window.solana;
+        if (!provider) { alert("X1 Wallet niet gevonden!"); return; }
 
-    async function tryNextNode() {
-        nodeIndex = (nodeIndex + 1) % RPC_NODES.length;
-        connection = new solanaWeb3.Connection(RPC_NODES[nodeIndex], "confirmed");
-        console.log("Switched to node: " + RPC_NODES[nodeIndex]);
-    }
-
-    async function updatePot() {
         try {
-            const info = await connection.getAccountInfo(new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"));
-            if(info) {
-                document.getElementById('pot-display').innerText = (info.lamports / 1000000000).toFixed(2);
-                document.getElementById('status').innerText = "ONLINE: " + RPC_NODES[nodeIndex].split('/')[2];
-            }
-        } catch(e) {
-            await tryNextNode();
+            document.getElementById('status').innerText = "VERBINDEN MET WALLET...";
+            const resp = await provider.connect();
+            const pubKey = resp.publicKey;
+
+            document.getElementById('status').innerText = "BLOCKHASH OPHALEN...";
+            const conn = new solanaWeb3.Connection(RPC, "confirmed");
+            const { blockhash } = await conn.getLatestBlockhash();
+
+            const tx = new solanaWeb3.Transaction();
+            tx.recentBlockhash = blockhash;
+            tx.feePayer = pubKey;
+
+            tx.add(solanaWeb3.SystemProgram.transfer({
+                fromPubkey: pubKey,
+                toPubkey: new solanaWeb3.PublicKey(TARGET),
+                lamports: 1.0 * 1000000000
+            }));
+
+            document.getElementById('status').innerText = "BEVESTIG IN JE WALLET...";
+            const sig = await provider.signAndSendTransaction(tx);
+            document.getElementById('status').innerText = "SUCCES! SIG: " + sig.substring(0,8);
+            alert("BITE GELUKT!");
+        } catch (err) {
+            document.getElementById('status').innerText = "FOUT: " + err.message;
+            console.error(err);
         }
     }
-    // ... rest van de functies blijven gelijk ...
 </script>
+</body>
+</html>
