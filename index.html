@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - STABILITY TEST v3</title>
+    <title>BALOO BITE - STRESS TEST v3</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: #0a0a0a; border: 2px solid #333; border-radius: 15px; padding: 30px; text-align: center; width: 350px; }
         .status-box { background: #001a00; color: #00ff00; padding: 10px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 20px; text-align: left; min-height: 60px; word-break: break-all; }
-        .btn-test { background: #444; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 5px; text-transform: uppercase; }
+        .btn-test { background: #444; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 5px; text-transform: uppercase; transition: background 0.2s; }
+        .btn-test:hover { background: #555; }
         .btn-test:active { background: #ff8c00; }
     </style>
 </head>
@@ -36,8 +37,8 @@
             log.innerHTML = "ACTION: CONNECTING...";
             await provider.connect();
 
-            // We maken een lege transactie en laten de WALLET de rest invullen
-            // Dit omzeilt de 'Failed to Fetch' van de browser
+            // We maken een transactie ZONDER handmatige blockhash fetch.
+            // Dit dwingt Backpack om zelf de netwerkgegevens op te halen.
             const transaction = new solanaWeb3.Transaction().add(
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: provider.publicKey,
@@ -48,11 +49,13 @@
 
             log.innerHTML = "ACTION: PUSHING TO WALLET...<br>CHECK FOR POPUP!";
             
-            // Backpack is slim genoeg om zelf de blockhash te regelen
-            const { signature } = await provider.signAndSendTransaction(transaction);
+            // signAndSendTransaction vraagt de wallet om de missende data aan te vullen
+            const result = await provider.signAndSendTransaction(transaction);
             
-            log.innerHTML = "SUCCESS: VERIFIED<br>SIG: " + signature.toString().substring(0, 20);
-            console.log("Tx Signature:", signature);
+            // Robuuste afhandeling van de signature om substring errors te voorkomen
+            const sig = result.signature || result;
+            log.innerHTML = "SUCCESS: VERIFIED<br>SIG: " + sig.toString().substring(0, 20);
+            console.log("Transaction ID:", sig);
 
         } catch (err) {
             log.innerHTML = "INTERRUPT: " + err.message.toUpperCase();
