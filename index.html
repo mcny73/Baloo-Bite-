@@ -3,34 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - STABLE</title>
+    <title>BALOO BITE - STABLE V39</title>
     <style>
-        body { background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-        .game-card { background: #0a0a0a; border: 5px solid #ffd700; border-radius: 25px; padding: 30px; text-align: center; width: 380px; box-shadow: 0 0 80px rgba(255,215,0,0.15); position: relative; }
+        body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .game-card { background: #0a0a0a; border: 5px solid #ffd700; border-radius: 25px; padding: 30px; text-align: center; width: 380px; box-shadow: 0 0 50px rgba(255,215,0,0.2); }
         .pot-container { background: #111; border: 2px solid #333; border-radius: 15px; padding: 10px; margin-bottom: 20px; }
         .pot-label { color: #ffd700; font-size: 12px; letter-spacing: 2px; }
-        .pot-value { font-size: 45px; color: #fff; text-shadow: 0 0 15px #ffd700; }
+        .pot-value { font-size: 45px; color: #fff; text-shadow: 0 0 10px #ffd700; }
         .slot-machine { display: flex; justify-content: center; gap: 10px; margin: 20px 0; background: #111; padding: 15px; border-radius: 20px; }
         .reel { width: 90px; height: 110px; background: #1a1a1a; border-radius: 12px; border: 3px solid #333; overflow: hidden; position: relative; }
+        .reel-strip { position: absolute; top: 0; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .bone-icon { height: 110px; width: 100%; display: flex; justify-content: center; align-items: center; font-size: 50px; }
         
-        .reel-strip { position: absolute; top: 0; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; transform: translate3d(0,0,0); will-change: transform; }
-        .bone-icon { height: 110px; width: 100%; display: flex; justify-content: center; align-items: center; font-size: 50px; user-select: none; }
-
-        @keyframes slot-spin {
-            0% { transform: translate3d(0, 0, 0); }
-            100% { transform: translate3d(0, -330px, 0); }
-        }
+        /* Simpele, stabiele verticale rol-animatie */
+        @keyframes roll-infinite { from { transform: translateY(0); } to { transform: translateY(-330px); } }
+        .spinning .reel-strip { animation: roll-infinite 0.1s linear infinite; }
         
-        .spinning .reel-strip { animation: slot-spin 0.1s linear infinite !important; }
-        .spinning .bone-icon { filter: blur(2px); opacity: 0.8; }
-        
-        .reel.win { border-color: #ffd700; box-shadow: 0 0 20px #ffd700; transform: scale(1.05); }
         .bet-container { background: #111; padding: 15px; border-radius: 15px; margin: 20px 0; }
-        .bet-slider { width: 100%; accent-color: #ffd700; cursor: pointer; }
-        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 22px; border-radius: 15px; text-transform: uppercase; box-shadow: 0 6px 0 #665200; outline: none; }
-        .btn-bite:active { transform: translateY(3px); box-shadow: 0 3px 0 #665200; }
-        .btn-bite:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
-        .btn-free { background: linear-gradient(#fff, #f0f0f0) !important; animation: pulse 0.8s infinite; }
+        .bet-slider { width: 100%; accent-color: #ffd700; }
+        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 22px; border-radius: 15px; text-transform: uppercase; }
+        .btn-bite:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-free { background: #fff !important; }
         #status { font-family: monospace; font-size: 11px; color: #666; margin-top: 15px; height: 20px; text-transform: uppercase; }
     </style>
 </head>
@@ -50,7 +43,7 @@
                 <span style="font-size:12px; color:#888;">WAGER</span>
                 <span id="betVal" style="color:#ffd700; font-weight:bold;">1.00 XNT</span>
             </div>
-            <input type="range" min="0.25" max="2.50" step="0.25" value="1.00" class="bet-slider" id="betRange" oninput="updateBet()">
+            <input type="range" min="0.25" max="2.50" step="0.25" value="1.00" class="bet-slider" id="betRange" oninput="document.getElementById('betVal').innerText = parseFloat(this.value).toFixed(2) + ' XNT'">
         </div>
         <button class="btn-bite" id="mainBtn" onclick="handleBite()">BITE THE BONE</button>
         <div id="status">READY FOR ACTION</div>
@@ -59,12 +52,6 @@
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
         let isFreeSpin = false;
-        function updateBet() { document.getElementById('betVal').innerText = parseFloat(document.getElementById('betRange').value).toFixed(2) + " XNT"; }
-        function getResult() {
-            const roll = () => { const r = Math.random(); if (r < 0.1) return '🥇'; if (r < 0.4) return '🥈'; return '🦴'; };
-            return [roll(), roll(), roll()];
-        }
-
         async function handleBite() {
             const btn = document.getElementById('mainBtn');
             const status = document.getElementById('status');
@@ -73,10 +60,9 @@
             const provider = window.x1 || window.backpack;
 
             if (!provider) return alert("Install X1 Wallet!");
-
             btn.disabled = true;
-            reels.forEach(r => { r.classList.add('spinning'); r.classList.remove('win'); });
-            status.innerText = "BALOO IS SNIFFING...";
+            reels.forEach(r => r.classList.add('spinning'));
+            status.innerText = "CONNECTING...";
 
             try {
                 if (!isFreeSpin) {
@@ -84,30 +70,32 @@
                     const wager = document.getElementById('betRange').value;
                     const tx = new solanaWeb3.Transaction().add(
                         solanaWeb3.SystemProgram.transfer({
-                            fromPubkey: provider.publicKey, 
-                            toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"), 
-                            lamports: wager * 1e9
+                            fromPubkey: provider.publicKey, toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"), lamports: wager * 1e9
                         })
                     );
                     await provider.signAndSendTransaction(tx);
                 }
 
-                const res = getResult();
-                for (let i = 0; i < reels.length; i++) {
-                    await new Promise(r => setTimeout(r, 600)); 
+                const res = ['🥇', '🥈', '🦴'].sort(() => Math.random() - 0.5); // Simpel resultaat
+                for (let i = 0; i < 3; i++) {
+                    await new Promise(r => setTimeout(r, 600));
                     reels[i].classList.remove('spinning');
                     strips[i].innerHTML = `<div class="bone-icon">${res[i]}</div>`;
                 }
-                
-                const goldCount = res.filter(b => b === '🥇').length;
-                const matchFound = (res[0] === res[1] || res[1] === res[2] || res[0] === res[2]);
-                
-                if (goldCount === 3) { status.innerText = "ALPHA BITE!"; reels.forEach(r => r.classList.add('win')); isFreeSpin = false; }
-                else if (goldCount === 2) { status.innerText = "GOLD RUSH!"; isFreeSpin = false; }
-                else if (matchFound && Math.random() < 0.25) { status.innerText = "FREE SPIN!"; isFreeSpin = true; }
-                else { status.innerText = "NO MATCH"; isFreeSpin = false; }
-
-            } catch (e) {
-                status.innerText = "TRANSACTION ERROR";
-                reels.forEach((r, i) => { r.classList.remove('spinning'); strips[i].innerHTML = `<div class="bone-icon">🦴</div>`; });
+                status.innerText = "NO MATCH";
                 isFreeSpin = false;
+            } catch (e) {
+                status.innerText = "ERROR";
+                reels.forEach((r, i) => { r.classList.remove('spinning'); strips[i].innerHTML = '<div class="bone-icon">🦴</div>'; });
+                isFreeSpin = false;
+            } finally {
+                let cd = 30;
+                const t = setInterval(() => {
+                    btn.innerText = `WAIT ${cd}S`;
+                    if (cd-- <= 0) { clearInterval(t); btn.disabled = false; btn.innerText = "BITE THE BONE"; }
+                }, 1000);
+            }
+        }
+    </script>
+</body>
+</html>
