@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BALOO'S BITE | X1 SVM</title>
+    <style>
+        body { background-color: #050505; color: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; text-align: center; padding: 40px; }
+        .game-container { border: 2px solid #222; background: #111; padding: 40px; border-radius: 25px; display: inline-block; box-shadow: 0 0 40px rgba(0, 242, 255, 0.1); max-width: 400px; }
+        h1 { letter-spacing: 4px; margin-bottom: 10px; }
+        .jackpot-display { color: #ff9900; font-size: 24px; border: 1px solid #ff9900; padding: 15px; border-radius: 12px; margin: 20px 0; background: rgba(255, 153, 0, 0.05); }
+        .slider-section { margin: 30px 0; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #00f2ff; }
+        .bet-info { font-size: 18px; margin-bottom: 10px; color: #00f2ff; }
+        .btn-crunch { background: linear-gradient(45deg, #ff4500, #ff8c00); color: white; padding: 20px; border: none; border-radius: 12px; cursor: pointer; font-size: 22px; width: 100%; font-weight: bold; text-transform: uppercase; transition: 0.3s; }
+        .btn-crunch:hover { transform: scale(1.02); box-shadow: 0 0 25px rgba(255, 69, 0, 0.5); }
+        #status { margin-top: 25px; font-family: monospace; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>BALOO'S BITE</h1>
+        <div class="jackpot-display">JACKPOT: 1,250.00 XNT</div>
+        
+        <div class="slider-section">
+            <div class="bet-info">YOUR BITE: <span id="betAmount">1.00</span> XNT</div>
+            <input type="range" id="biteSlider" min="0.25" max="10" step="0.25" value="1.00" oninput="updateDisplay(this.value)">
+        </div>
+
+        <button class="btn-crunch" onclick="initiateBite()">CHOMP!</button>
+        
+        <div id="status">WALLET STATUS: DISCONNECTED</div>
+    </div>
+
+    <script>
+        function updateDisplay(val) {
+            document.getElementById('betAmount').innerText = parseFloat(val).toFixed(2);
+        }
+
+        async function initiateBite() {
+            const statusDiv = document.getElementById('status');
+            const amount = document.getElementById('biteSlider').value;
+            
+            // Checking for X1 / Solana provider
+            const provider = window.x1 || window.solana;
+
+            if (provider) {
+                try {
+                    statusDiv.innerText = "REQUESTING CONNECTION...";
+                    const response = await provider.connect();
+                    statusDiv.innerText = "CONNECTED: " + response.publicKey.toString().substring(0, 8) + "...";
+                    
+                    alert("Ready to bite " + amount + " XNT. Please confirm the transaction in your X1 Wallet.");
+                } catch (err) {
+                    statusDiv.innerText = "ERROR: " + err.message;
+                }
+            } else {
+                statusDiv.innerText = "ERROR: X1 WALLET NOT DETECTED";
+                alert("Please ensure your X1 Wallet extension is active.");
+            }
+        }
+    </script>
+</body>
+</html>
