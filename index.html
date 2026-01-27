@@ -2,31 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - STABLE ENGINE</title>
+    <title>BALOO BITE - EMERGENCY FIX</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .game-card { background: #0a0a0a; border: 5px solid #ffd700; border-radius: 25px; padding: 30px; text-align: center; width: 380px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
-        .pot-value { font-size: 45px; color: #fff; text-shadow: 0 0 15px #ffd700; margin: 10px 0; }
-        .slot-machine { display: flex; justify-content: center; gap: 10px; margin: 20px 0; background: #111; padding: 15px; border-radius: 20px; }
-        .reel { width: 90px; height: 110px; background: #1a1a1a; border-radius: 12px; border: 3px solid #333; display: flex; align-items: center; justify-content: center; font-size: 50px; overflow: hidden; }
-        
+        .game-card { background: #0a0a0a; border: 5px solid #ffd700; border-radius: 25px; padding: 30px; text-align: center; width: 350px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
+        .pot-value { font-size: 45px; color: #fff; text-shadow: 0 0 10px #ffd700; margin: 10px 0; }
+        .slot-machine { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
+        .reel { width: 80px; height: 100px; background: #111; border: 2px solid #333; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 45px; }
         .spinning { animation: roll 0.1s linear infinite; }
         @keyframes roll { 0% { transform: translateY(-5px); } 100% { transform: translateY(5px); } }
-
-        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 24px; border-radius: 15px; text-transform: uppercase; box-shadow: 0 6px 0 #665200; }
-        .btn-bite:disabled { opacity: 0.5; cursor: not-allowed; }
-        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; min-height: 20px; }
+        .btn-bite { background: #ffd700; color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 24px; border-radius: 15px; text-transform: uppercase; }
+        .btn-bite:disabled { opacity: 0.5; }
+        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; }
     </style>
 </head>
 <body>
     <div class="game-card">
         <div style="font-size:12px; color:#ffd700;">LIVE JACKPOT (XNT)</div>
         <div class="pot-value" id="potDisplay">---</div>
-        <div class="slot-machine">
-            <div class="reel" id="re1">🦴</div>
-            <div class="reel" id="re2">🦴</div>
-            <div class="reel" id="re3">🦴</div>
-        </div>
+        <div class="slot-machine"><div class="reel" id="re1">🦴</div><div class="reel" id="re2">🦴</div><div class="reel" id="re3">🦴</div></div>
         <button class="btn-bite" id="mainBtn" onclick="handleBite()">BITE THE BONE</button>
         <div id="status">READY</div>
     </div>
@@ -41,9 +35,9 @@
             try {
                 const bal = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY));
                 document.getElementById('potDisplay').innerText = (bal / 1e9).toFixed(2);
-            } catch(e) { console.log("RPC Delay..."); }
+            } catch(e) {}
         }
-        updatePot(); setInterval(updatePot, 10000);
+        updatePot();
 
         async function handleBite() {
             const btn = document.getElementById('mainBtn');
@@ -51,8 +45,7 @@
             const reels = [document.getElementById('re1'), document.getElementById('re2'), document.getElementById('re3')];
             const provider = window.x1 || window.backpack;
 
-            if (!provider) return alert("Install X1 Wallet!");
-
+            if (!provider) return alert("Install Wallet!");
             btn.disabled = true;
             status.innerText = "OPENING WALLET...";
             reels.forEach(r => r.classList.add('spinning'));
@@ -64,17 +57,15 @@
                         solanaWeb3.SystemProgram.transfer({
                             fromPubkey: provider.publicKey,
                             toPubkey: new solanaWeb3.PublicKey(TREASURY),
-                            lamports: 1 * 1000000000
+                            lamports: 1000000000
                         })
                     );
-                    const { blockhash } = await connection.getLatestBlockhash('confirmed');
+                    const { blockhash } = await connection.getLatestBlockhash();
                     tx.recentBlockhash = blockhash;
                     tx.feePayer = provider.publicKey;
-                    
                     await provider.signAndSendTransaction(tx);
                 }
 
-                status.innerText = "SNIFFING BONES...";
                 const items = ['🦴', '🥈', '🥇'];
                 const res = [items[Math.floor(Math.random()*3)], items[Math.floor(Math.random()*3)], items[Math.floor(Math.random()*3)]];
                 
@@ -85,29 +76,26 @@
                 }
 
                 if (res[0] === res[1] || res[1] === res[2]) {
-                    status.innerText = "FREE BARK!";
-                    isFree = true; btn.innerText = "FREE BARK!"; btn.disabled = false; return;
+                    status.innerText = "FREE SPIN!";
+                    isFree = true; btn.innerText = "FREE BARK!"; btn.disabled = false;
                 } else {
                     status.innerText = "NO MATCH";
                     isFree = false;
+                    startCooldown();
                 }
             } catch (e) {
-                console.error(e);
-                status.innerText = "TRANSACTION CANCELED";
+                status.innerText = "ERROR - TRY AGAIN";
                 reels.forEach(r => r.classList.remove('spinning'));
-                isFree = false;
+                btn.disabled = false;
             }
+        }
 
-            btn.innerText = "WAITING...";
+        function startCooldown() {
+            const btn = document.getElementById('mainBtn');
             let cd = 30;
-            const timer = setInterval(() => {
+            const t = setInterval(() => {
                 btn.innerText = "WAIT " + cd + "S";
-                if (cd-- <= 0) {
-                    clearInterval(timer);
-                    btn.disabled = false;
-                    btn.innerText = "BITE THE BONE";
-                    status.innerText = "READY";
-                }
+                if (cd-- <= 0) { clearInterval(t); btn.disabled = false; btn.innerText = "BITE THE BONE"; }
             }, 1000);
         }
     </script>
