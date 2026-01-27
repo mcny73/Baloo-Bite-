@@ -1,78 +1,47 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>BALOO BITE - V5 FINAL STABILITY</title>
-    <style>
-        body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #0a0a0a; border: 2px solid #333; border-radius: 15px; padding: 30px; text-align: center; width: 350px; }
-        .status-box { background: #001a00; color: #00ff00; padding: 12px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 20px; text-align: left; min-height: 80px; word-break: break-all; line-height: 1.4; }
-        .btn-test { background: #444; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 5px; text-transform: uppercase; }
-        .btn-test:disabled { opacity: 0.5; cursor: not-allowed; background: #222; }
-    </style>
-</head>
-<body>
+async function ultimateChomp() {
+    const log = document.getElementById('status');
+    const btn = document.getElementById('mainBtn');
+    const provider = window.backpack;
 
-<div class="card">
-    <div class="status-box" id="status">V5_STABILITY: STANDBY<br>READY FOR ULTIMATE TEST...</div>
-    <div style="font-size: 24px; color: #ffcc00; margin: 20px 0;">1.0 XNT TEST</div>
-    <button class="btn-test" id="mainBtn" onclick="ultimateChomp()">Execute Hard Chomp</button>
-</div>
+    if (btn.disabled) return; // Dubbele beveiliging
 
-<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
-<script>
-    const TARGET = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
+    try {
+        btn.disabled = true;
+        btn.innerText = "CHOMPING...";
+        log.innerHTML = "STATUS: HANDSHAKE IN PROGRESS...";
+        
+        await provider.connect();
 
-    async function ultimateChomp() {
-        const log = document.getElementById('status');
-        const btn = document.getElementById('mainBtn');
-        const provider = window.backpack;
+        const tx = new solanaWeb3.Transaction().add(
+            solanaWeb3.SystemProgram.transfer({
+                fromPubkey: provider.publicKey,
+                toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
+                lamports: 1.0 * 1e9
+            })
+        );
 
-        if (!provider) {
-            log.innerHTML = "ERROR: BACKPACK_NOT_FOUND";
-            return;
+        log.innerHTML = "STATUS: AWAITING_APPROVAL...";
+        const result = await provider.signAndSendTransaction(tx);
+        
+        log.innerHTML = "SUCCESS! VERIFIED<br>ID: " + result.signature.substring(0,20);
+
+    } catch (err) {
+        if (err.message.includes('closed')) {
+            log.innerHTML = "INTERRUPT: WALLET IS BUSY<br>WAIT 3 SECONDS AND TRY AGAIN.";
+        } else {
+            log.innerHTML = "ERROR: " + err.message.toUpperCase();
         }
-
-        try {
-            btn.disabled = true;
-            log.innerHTML = "STATUS: CHECKING_CONNECTION...";
-            
-            // Alleen verbinden als we nog niet verbonden zijn
-            if (!provider.isConnected) {
-                await provider.connect();
+    } finally {
+        // We houden de knop 5 seconden dicht voor absolute veiligheid
+        let countdown = 5;
+        const timer = setInterval(() => {
+            btn.innerText = `WAIT (${countdown}s)`;
+            countdown--;
+            if (countdown < 0) {
+                clearInterval(timer);
+                btn.disabled = false;
+                btn.innerText = "EXECUTE HARD CHOMP";
             }
-
-            log.innerHTML = "STATUS: PREPARING_TRANSACTION...<br>PLEASE CHECK BACKPACK POPUP";
-
-            const tx = new solanaWeb3.Transaction().add(
-                solanaWeb3.SystemProgram.transfer({
-                    fromPubkey: provider.publicKey,
-                    toPubkey: new solanaWeb3.PublicKey(TARGET),
-                    lamports: 1.0 * 1e9
-                })
-            );
-
-            // We laten de wallet de blockhash afhandelen om 'Failed to Fetch' te voorkomen
-            const result = await provider.signAndSendTransaction(tx);
-            const sig = result.signature || result;
-
-            log.innerHTML = "VERIFIED_SUCCESS!<br>ID: " + sig.toString().substring(0, 24);
-            console.log("Full Signature:", sig);
-
-        } catch (err) {
-            console.error(err);
-            if (err.message.includes('closed')) {
-                log.innerHTML = "INTERRUPT: PLUGIN_CLOSED<br>ACTION: AUTO-RECONNECTING... TRY AGAIN IN 2 SECONDS.";
-                // Forceer een harde reset van de provider status
-                if(provider.disconnect) await provider.disconnect().catch(() => {});
-            } else {
-                log.innerHTML = "ERROR: " + err.message.toUpperCase();
-            }
-        } finally {
-            // Wacht 2 seconden voor we de knop weer vrijgeven om de wallet rust te geven
-            setTimeout(() => { btn.disabled = false; }, 2000);
-        }
+        }, 1000);
     }
-</script>
-</body>
-</html>
+}
