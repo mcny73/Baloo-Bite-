@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - ALPHA ROTTWEILER</title>
+    <title>BALOO BITE - PURE SPIN</title>
     <style>
         body { background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
         
@@ -27,6 +27,7 @@
             border: 3px solid #333; overflow: hidden; position: relative; 
         }
 
+        /* De strip bevat nu extra iconen voor een naadloze loop tijdens het draaien */
         .reel-strip {
             position: absolute; top: 0; left: 0; width: 100%;
             display: flex; flex-direction: column; align-items: center;
@@ -37,12 +38,16 @@
             align-items: center; font-size: 50px; user-select: none;
         }
 
-        @keyframes roll {
+        /* Pure verticale rol-animatie zonder trillen */
+        @keyframes pure-roll {
             0% { transform: translateY(0); }
-            100% { transform: translateY(-330px); }
+            100% { transform: translateY(-330px); } /* Verplaatst exact 3 iconen */
         }
         
-        .spinning .reel-strip { animation: roll 0.1s linear infinite; }
+        .spinning .reel-strip { 
+            animation: pure-roll 0.1s linear infinite; 
+        }
+
         .reel.win { border-color: #ffd700; box-shadow: 0 0 20px #ffd700; transform: scale(1.05); }
 
         .bet-container { background: #111; padding: 15px; border-radius: 15px; margin: 20px 0; }
@@ -50,7 +55,7 @@
         
         .btn-bite { 
             background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; 
-            padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 26px; 
+            padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 22px; 
             border-radius: 15px; text-transform: uppercase; box-shadow: 0 6px 0 #665200;
         }
         .btn-bite:active { transform: translateY(3px); box-shadow: 0 3px 0 #665200; }
@@ -89,8 +94,6 @@
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
-        // Logica en wallet-integratie blijven exact zoals we hebben afgesproken in V30
-        const BONES = ['🦴', '🥈', '🥇'];
         let isFreeSpin = false;
 
         function updateBet() {
@@ -118,12 +121,17 @@
 
             btn.disabled = true;
             status.innerText = "BALOO IS SNIFFING...";
-            reels.forEach(r => { r.classList.add('spinning'); r.classList.remove('win'); });
+            
+            // Start direct met rollen, geen andere animaties
+            reels.forEach(r => { 
+                r.classList.add('spinning'); 
+                r.classList.remove('win'); 
+            });
 
             try {
                 if (!isFreeSpin) {
                     if (provider.disconnect) await provider.disconnect().catch(() => {});
-                    await new Promise(r => setTimeout(r, 2000));
+                    await new Promise(r => setTimeout(r, 1500));
                     await provider.connect();
 
                     const wager = document.getElementById('betRange').value;
@@ -139,8 +147,9 @@
 
                 const res = getResult();
 
+                // Stop sequentie: één voor één stoppen met een vloeiende overgang
                 for (let i = 0; i < reels.length; i++) {
-                    await new Promise(r => setTimeout(r, 600)); 
+                    await new Promise(r => setTimeout(r, 700)); 
                     reels[i].classList.remove('spinning');
                     strips[i].innerHTML = `<div class="bone-icon">${res[i]}</div>`;
                 }
