@@ -3,119 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - ROTTWEILER SLOTS</title>
+    <title>BALOO BITE - ALPHA ROTTWEILER</title>
     <style>
-        body { background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .game-card { background: #0a0a0a; border: 5px solid #ffd700; border-radius: 25px; padding: 40px; text-align: center; width: 400px; box-shadow: 0 0 60px rgba(255,215,0,0.2); }
+        body { background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
+        .game-card { background: #0a0a0a; border: 5px solid #ffd700; border-radius: 25px; padding: 30px; text-align: center; width: 400px; box-shadow: 0 0 80px rgba(255,215,0,0.15); }
         
-        .bet-container { margin: 20px 0; background: #111; padding: 20px; border-radius: 15px; border: 1px solid #444; }
-        .bet-slider { width: 100%; cursor: pointer; accent-color: #ffcc00; }
-        .bet-labels { display: flex; justify-content: space-between; font-size: 12px; color: #888; margin-top: 5px; }
+        .pot-container { background: #111; border: 2px solid #333; border-radius: 15px; padding: 10px; margin-bottom: 20px; }
+        .pot-label { color: #ffd700; font-size: 12px; letter-spacing: 2px; }
+        .pot-value { font-size: 45px; color: #fff; text-shadow: 0 0 15px #ffd700; }
+
+        .slot-machine { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
+        .reel { width: 100px; height: 120px; background: #1a1a1a; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 55px; border: 3px solid #333; transition: 0.3s; }
+        .reel.win { border-color: #ffd700; box-shadow: 0 0 20px #ffd700; transform: scale(1.05); }
+
+        .bet-container { background: #111; padding: 15px; border-radius: 15px; margin: 20px 0; }
+        .bet-slider { width: 100%; accent-color: #ffd700; cursor: pointer; }
         
-        .pot-value { font-size: 60px; color: #ffcc00; text-shadow: 3px 3px #000; margin: 10px 0; }
-        .slot-machine { display: flex; justify-content: center; gap: 15px; margin: 25px 0; }
-        .reel { 
-            width: 90px; height: 110px; background: #222; border-radius: 10px; 
-            display: flex; justify-content: center; align-items: center; 
-            font-size: 50px; border: 3px solid #ffd700; overflow: hidden; 
-        }
+        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 26px; border-radius: 15px; text-transform: uppercase; transition: 0.2s; box-shadow: 0 6px 0 #665200; }
+        .btn-bite:active { transform: translateY(3px); box-shadow: 0 3px 0 #665200; }
+        .btn-bite:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
+        .btn-free { background: linear-gradient(#fff, #ccc) !important; color: #000 !important; box-shadow: 0 6px 0 #666 !important; animation: pulse 1s infinite; }
 
-        .spinning { animation: spin 0.2s linear infinite; }
-        @keyframes spin { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
-
-        .btn-bite { 
-            background: linear-gradient(#ffcc00, #b38f00); color: #000; border: none; 
-            padding: 25px; width: 100%; cursor: pointer; font-weight: bold; font-size: 28px; 
-            border-radius: 15px; text-transform: uppercase; box-shadow: 0 6px 0 #665200; 
-        }
-        .btn-bite:disabled { opacity: 0.3; transform: translateY(6px); box-shadow: none; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        .spinning { animation: spin 0.15s linear infinite; }
+        @keyframes spin { 0% { transform: translateY(-20px); } 50% { transform: translateY(20px); } 100% { transform: translateY(-20px); } }
+        
+        #status { font-family: monospace; font-size: 11px; color: #666; margin-top: 15px; height: 20px; }
     </style>
 </head>
 <body>
 
 <div class="game-card">
-    <div style="color: #ffd700; letter-spacing: 3px; font-size: 20px;">BALOO BITE - X1 EDITION</div>
-    
-    <div class="pot-value" id="displayBet">1.00</div>
-    <div style="color: #ffcc00; margin-top: -15px; font-size: 14px;">XNT WAGER</div>
-
-    <div class="bet-container">
-        <input type="range" min="0.25" max="10" step="0.25" value="1.00" class="bet-slider" id="betSlider" oninput="updateBetDisplay()">
-        <div class="bet-labels">
-            <span>0.25</span>
-            <span>5.00</span>
-            <span>10.00</span>
-        </div>
+    <div class="pot-container">
+        <div class="pot-label">LIVE JACKPOT (XNT)</div>
+        <div class="pot-value" id="potDisplay">100.00</div>
     </div>
     
     <div class="slot-machine">
-        <div class="reel"><span id="r1">🦴</span></div>
-        <div class="reel"><span id="r2">🦴</span></div>
-        <div class="reel"><span id="r3">🦴</span></div>
+        <div class="reel" id="re1">🦴</div>
+        <div class="reel" id="re2">🦴</div>
+        <div class="reel" id="re3">🦴</div>
     </div>
 
-    <button class="btn-bite" id="mainBtn" onclick="executeBite()">BITE THE BONE</button>
-    <div id="status" style="font-family:monospace; font-size:10px; color:#666; margin-top:20px;">X1_NETWORK_READY</div>
+    <div class="bet-container">
+        <div style="display:flex; justify-content: space-between; margin-bottom: 5px;">
+            <span style="font-size:12px; color:#888;">WAGER</span>
+            <span id="betVal" style="color:#ffd700; font-weight:bold;">1.00 XNT</span>
+        </div>
+        <input type="range" min="0.25" max="2.50" step="0.25" value="1.00" class="bet-slider" id="betRange" oninput="updateBet()">
+    </div>
+
+    <button class="btn-bite" id="mainBtn" onclick="handleBite()">BITE THE BONE</button>
+    <div id="status">READY FOR ACTION</div>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
-    const bones = ['🦴', '🥈', '🥇']; 
+    const BONES = ['🦴', '🥈', '🥇']; // 60%, 30%, 10%
+    let isFreeSpin = false;
 
-    function updateBetDisplay() {
-        const val = document.getElementById('betSlider').value;
-        document.getElementById('displayBet').innerText = parseFloat(val).toFixed(2);
+    function updateBet() {
+        document.getElementById('betVal').innerText = parseFloat(document.getElementById('betRange').value).toFixed(2) + " XNT";
     }
 
-    async function executeBite() {
+    function getResult() {
+        const roll = () => {
+            const r = Math.random();
+            if (r < 0.1) return '🥇';
+            if (r < 0.4) return '🥈';
+            return '🦴';
+        };
+        return [roll(), roll(), roll()];
+    }
+
+    async function handleBite() {
         const btn = document.getElementById('mainBtn');
         const status = document.getElementById('status');
-        const reels = [document.getElementById('r1'), document.getElementById('r2'), document.getElementById('r3')];
-        const betAmount = document.getElementById('betSlider').value;
-        
+        const reels = [document.getElementById('re1'), document.getElementById('re2'), document.getElementById('re3')];
         const provider = window.x1 || window.backpack;
 
-        if (!provider) {
-            alert("X1 Wallet or Backpack not found!");
-            return;
-        }
+        if (!provider) return alert("Install X1 Wallet!");
+
+        btn.disabled = true;
+        status.innerText = "BALOO IS SNIFFING...";
+        reels.forEach(r => { r.classList.add('spinning'); r.classList.remove('win'); });
 
         try {
-            btn.disabled = true;
-            status.innerText = "BALOO IS READY...";
-            reels.forEach(r => r.classList.add('spinning'));
-
+            // Stability reset
             if (provider.disconnect) await provider.disconnect().catch(() => {});
-            await new Promise(r => setTimeout(r, 2000)); 
+            await new Promise(r => setTimeout(r, 2000));
             await provider.connect();
 
-            const tx = new solanaWeb3.Transaction().add(
-                solanaWeb3.SystemProgram.transfer({
-                    fromPubkey: provider.publicKey,
-                    toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
-                    lamports: betAmount * 1e9 
-                })
-            );
+            // Only charge if NOT a free spin
+            if (!isFreeSpin) {
+                const wager = document.getElementById('betRange').value;
+                const tx = new solanaWeb3.Transaction().add(
+                    solanaWeb3.SystemProgram.transfer({
+                        fromPubkey: provider.publicKey,
+                        toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
+                        lamports: wager * 1e9
+                    })
+                );
+                await provider.signAndSendTransaction(tx);
+            }
 
-            const result = await provider.signAndSendTransaction(tx);
+            const res = getResult();
+            const goldCount = res.filter(b => b === '🥇').length;
             
-            reels.forEach(r => {
+            // Stop animation & Show results
+            reels.forEach((r, i) => {
                 r.classList.remove('spinning');
-                r.innerText = bones[Math.floor(Math.random() * bones.length)];
+                r.innerText = res[i];
             });
 
-            status.innerText = "SUCCESS! BITE CONFIRMED";
+            // Logic Check
+            if (res[0] === '🥇' && res[1] === '🥇' && res[2] === '🥇') {
+                status.innerText = "ALPHA BITE! JACKPOT!";
+                reels.forEach(r => r.classList.add('win'));
+                isFreeSpin = false;
+            } else if (goldCount === 2) {
+                status.innerText = "GOLD RUSH! 5X WIN!";
+                isFreeSpin = false;
+            } else if (res[0] === res[1] || res[1] === res[2] || res[0] === res[2]) {
+                status.innerText = "FRIENDLY BARK! FREE SPIN!";
+                isFreeSpin = true;
+            } else {
+                status.innerText = "NO LUCK THIS TIME";
+                isFreeSpin = false;
+            }
 
-        } catch (err) {
+        } catch (e) {
+            status.innerText = "SESSION BUSY - WAIT 30S";
             reels.forEach(r => { r.classList.remove('spinning'); r.innerText = '❌'; });
-            status.innerText = "BALOO BUSY - COOLDOWN ACTIVE";
+            isFreeSpin = false;
         } finally {
-            let countdown = 30;
-            const timer = setInterval(() => {
-                btn.innerText = `WAIT ${countdown}S`;
-                countdown--;
-                if (countdown < 0) {
-                    clearInterval(timer);
+            updateButtonState();
+        }
+    }
+
+    function updateButtonState() {
+        const btn = document.getElementById('mainBtn');
+        if (isFreeSpin) {
+            btn.innerText = "FREE BARK!";
+            btn.classList.add('btn-free');
+            btn.disabled = false;
+        } else {
+            btn.innerText = "WAITING...";
+            btn.classList.remove('btn-free');
+            let cd = 30;
+            const t = setInterval(() => {
+                btn.innerText = `WAIT ${cd}S`;
+                if (cd-- <= 0) {
+                    clearInterval(t);
                     btn.disabled = false;
                     btn.innerText = "BITE THE BONE";
                 }
