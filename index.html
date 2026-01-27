@@ -3,13 +3,12 @@ async function ultimateChomp() {
     const btn = document.getElementById('mainBtn');
     const provider = window.backpack;
 
-    if (btn.disabled) return; // Dubbele beveiliging
-
     try {
         btn.disabled = true;
-        btn.innerText = "CHOMPING...";
-        log.innerHTML = "STATUS: HANDSHAKE IN PROGRESS...";
+        log.innerHTML = "STATUS: INITIALIZING SAFE HANDSHAKE...";
         
+        // Forceer een korte pauze voor we verbinden
+        await new Promise(r => setTimeout(r, 500));
         await provider.connect();
 
         const tx = new solanaWeb3.Transaction().add(
@@ -20,22 +19,21 @@ async function ultimateChomp() {
             })
         );
 
-        log.innerHTML = "STATUS: AWAITING_APPROVAL...";
+        log.innerHTML = "STATUS: WAITING FOR USER APPROVAL...";
         const result = await provider.signAndSendTransaction(tx);
-        
-        log.innerHTML = "SUCCESS! VERIFIED<br>ID: " + result.signature.substring(0,20);
+        log.innerHTML = "VERIFIED SUCCESS!<br>SIG: " + result.signature.toString().substring(0, 20);
 
     } catch (err) {
         if (err.message.includes('closed')) {
-            log.innerHTML = "INTERRUPT: WALLET IS BUSY<br>WAIT 3 SECONDS AND TRY AGAIN.";
+            log.innerHTML = "RECOVERING: WALLET SESSION REFRESHING...<br>PLEASE WAIT 5 SECONDS.";
+            if(provider.disconnect) await provider.disconnect();
         } else {
-            log.innerHTML = "ERROR: " + err.message.toUpperCase();
+            log.innerHTML = "INTERRUPT: " + err.message.toUpperCase();
         }
     } finally {
-        // We houden de knop 5 seconden dicht voor absolute veiligheid
-        let countdown = 5;
+        let countdown = 8;
         const timer = setInterval(() => {
-            btn.innerText = `WAIT (${countdown}s)`;
+            btn.innerText = `NEXT CHOMP IN ${countdown}s`;
             countdown--;
             if (countdown < 0) {
                 clearInterval(timer);
