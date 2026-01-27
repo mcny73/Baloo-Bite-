@@ -2,46 +2,47 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - V4 STABILITY</title>
+    <title>BALOO BITE - V5 FINAL STABILITY</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: #0a0a0a; border: 2px solid #333; border-radius: 15px; padding: 30px; text-align: center; width: 350px; }
-        .status-box { background: #001a00; color: #00ff00; padding: 12px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 20px; text-align: left; min-height: 70px; word-break: break-all; line-height: 1.4; }
+        .status-box { background: #001a00; color: #00ff00; padding: 12px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 20px; text-align: left; min-height: 80px; word-break: break-all; line-height: 1.4; }
         .btn-test { background: #444; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 5px; text-transform: uppercase; }
-        .btn-test:active { background: #ff8c00; }
+        .btn-test:disabled { opacity: 0.5; cursor: not-allowed; background: #222; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div class="status-box" id="status">V4_STABILITY: ACTIVE<br>READY FOR STRESS TEST...</div>
+    <div class="status-box" id="status">V5_STABILITY: STANDBY<br>READY FOR ULTIMATE TEST...</div>
     <div style="font-size: 24px; color: #ffcc00; margin: 20px 0;">1.0 XNT TEST</div>
-    <button class="btn-test" id="mainBtn" onclick="stableChomp()">Execute Hard Chomp</button>
+    <button class="btn-test" id="mainBtn" onclick="ultimateChomp()">Execute Hard Chomp</button>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
     const TARGET = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
 
-    async function stableChomp() {
+    async function ultimateChomp() {
         const log = document.getElementById('status');
         const btn = document.getElementById('mainBtn');
         const provider = window.backpack;
 
         if (!provider) {
-            log.innerHTML = "CRITICAL: BACKPACK_NOT_FOUND";
+            log.innerHTML = "ERROR: BACKPACK_NOT_FOUND";
             return;
         }
 
         try {
-            btn.disabled = true; // Voorkom dubbelklikken tijdens proces
-            log.innerHTML = "ACTION: RE-ESTABLISHING SESSION...";
+            btn.disabled = true;
+            log.innerHTML = "STATUS: CHECKING_CONNECTION...";
             
-            // We verbreken en verbinden opnieuw om 'Plugin Closed' te voorkomen
-            if (provider.disconnect) await provider.disconnect();
-            await provider.connect();
+            // Alleen verbinden als we nog niet verbonden zijn
+            if (!provider.isConnected) {
+                await provider.connect();
+            }
 
-            log.innerHTML = "ACTION: PREPARING SECURE TX...<br>AWAITING BACKPACK POPUP";
+            log.innerHTML = "STATUS: PREPARING_TRANSACTION...<br>PLEASE CHECK BACKPACK POPUP";
 
             const tx = new solanaWeb3.Transaction().add(
                 solanaWeb3.SystemProgram.transfer({
@@ -51,22 +52,25 @@
                 })
             );
 
-            // Laat de wallet de zware netwerk-oproepen doen
+            // We laten de wallet de blockhash afhandelen om 'Failed to Fetch' te voorkomen
             const result = await provider.signAndSendTransaction(tx);
             const sig = result.signature || result;
 
-            log.innerHTML = "VERIFIED SUCCESS!<br>SIG: " + sig.toString().substring(0, 22);
+            log.innerHTML = "VERIFIED_SUCCESS!<br>ID: " + sig.toString().substring(0, 24);
             console.log("Full Signature:", sig);
 
         } catch (err) {
-            // Als de plugin gesloten is, leggen we dat specifiek uit
+            console.error(err);
             if (err.message.includes('closed')) {
-                log.innerHTML = "INTERRUPT: WALLET_SESSION_CLOSED<br>TRYING AUTO-RECOVERY... CLICK AGAIN.";
+                log.innerHTML = "INTERRUPT: PLUGIN_CLOSED<br>ACTION: AUTO-RECONNECTING... TRY AGAIN IN 2 SECONDS.";
+                // Forceer een harde reset van de provider status
+                if(provider.disconnect) await provider.disconnect().catch(() => {});
             } else {
-                log.innerHTML = "INTERRUPT: " + err.message.toUpperCase();
+                log.innerHTML = "ERROR: " + err.message.toUpperCase();
             }
         } finally {
-            btn.disabled = false;
+            // Wacht 2 seconden voor we de knop weer vrijgeven om de wallet rust te geven
+            setTimeout(() => { btn.disabled = false; }, 2000);
         }
     }
 </script>
