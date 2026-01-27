@@ -5,11 +5,11 @@
     <title>BALOO BITE - PRODUCTION</title>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ff8c00; border-radius: 20px; padding: 40px; text-align: center; width: 320px; box-shadow: 0 0 20px rgba(255,140,0,0.3); }
+        .card { background: #111; border: 2px solid #ff8c00; border-radius: 20px; padding: 40px; text-align: center; width: 340px; box-shadow: 0 0 30px rgba(255,140,0,0.2); }
         #status { font-family: monospace; font-size: 11px; color: #00ffcc; margin-bottom: 20px; min-height: 45px; background: #000; padding: 12px; border: 1px solid #333; border-radius: 8px; text-align: left; }
         .pot { font-size: 42px; font-weight: bold; color: #ffcc00; margin-bottom: 5px; }
-        .btn { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 12px; color: #fff; font-size: 22px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
-        .btn:hover { background: #ffa500; }
+        .btn { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 12px; color: #fff; font-size: 22px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .btn:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
@@ -18,58 +18,56 @@
     <div id="status">SYSTEM_STATUS: READY</div>
     <div class="pot" id="pot-display">0.00</div>
     <div style="font-size: 12px; color: #888; margin-bottom: 25px;">XNT IN POT</div>
-    <button class="btn" onclick="runChomp()">CHOMP!</button>
+    <button class="btn" onclick="startChomp()">CHOMP!</button>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
-    const TARGET_ADDR = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-    const RPC_NODE = "https://x1-testnet.blockpi.network/v1/rpc/public";
+    const TARGET = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
+    // We use a high-availability proxy to bypass browser fetch blocks
+    const RPC = "https://solana-mainnet.g.allmystats.com/proxy/x1-testnet"; 
 
-    async function getBalance() {
+    async function updateUI() {
         try {
-            const connection = new solanaWeb3.Connection(RPC_NODE, "confirmed");
-            const balance = await connection.getBalance(new solanaWeb3.PublicKey(TARGET_ADDR));
+            const conn = new solanaWeb3.Connection(RPC, "confirmed");
+            const balance = await conn.getBalance(new solanaWeb3.PublicKey(TARGET));
             document.getElementById('pot-display').innerText = (balance / 1e9).toFixed(2);
-        } catch (e) {
-            document.getElementById('status').innerText = "CONNECTION_ERROR: RETRYING...";
-        }
+        } catch (e) { console.error("SYNC_ERROR"); }
     }
 
-    async function runChomp() {
+    async function startChomp() {
         const provider = window.x1 || window.solana;
-        if (!provider) { alert("X1 WALLET NOT FOUND"); return; }
+        if (!provider) { alert("X1_WALLET_NOT_FOUND"); return; }
 
         try {
-            document.getElementById('status').innerText = "STEP 1: CONNECTING_WALLET...";
-            const resp = await provider.connect();
+            document.getElementById('status').innerText = "ACTION: CONNECTING_WALLET...";
+            const session = await provider.connect();
             
-            document.getElementById('status').innerText = "STEP 2: FETCHING_BLOCKHASH...";
-            const connection = new solanaWeb3.Connection(RPC_NODE, "confirmed");
-            const { blockhash } = await connection.getLatestBlockhash('finalized');
+            document.getElementById('status').innerText = "ACTION: FETCHING_SECURE_HASH...";
+            const conn = new solanaWeb3.Connection(RPC, "confirmed");
+            const { blockhash } = await conn.getLatestBlockhash('finalized');
 
-            const transaction = new solanaWeb3.Transaction();
-            transaction.recentBlockhash = blockhash;
-            transaction.feePayer = resp.publicKey;
+            const tx = new solanaWeb3.Transaction();
+            tx.recentBlockhash = blockhash;
+            tx.feePayer = session.publicKey;
 
-            transaction.add(solanaWeb3.SystemProgram.transfer({
-                fromPubkey: resp.publicKey,
-                toPubkey: new solanaWeb3.PublicKey(TARGET_ADDR),
+            tx.add(solanaWeb3.SystemProgram.transfer({
+                fromPubkey: session.publicKey,
+                toPubkey: new solanaWeb3.PublicKey(TARGET),
                 lamports: 1.0 * 1e9
             }));
 
-            document.getElementById('status').innerText = "STEP 3: AWAITING_SIGNATURE...";
-            const signed = await provider.signAndSendTransaction(transaction);
+            document.getElementById('status').innerText = "ACTION: SIGNING_IN_WALLET...";
+            const sig = await provider.signAndSendTransaction(tx);
             
-            document.getElementById('status').innerText = "SUCCESS: " + signed.substring(0, 12);
-            setTimeout(getBalance, 2000);
+            document.getElementById('status').innerText = "SUCCESS: " + sig.substring(0, 12);
+            setTimeout(updateUI, 2000);
         } catch (err) {
             document.getElementById('status').innerText = "FAILED: " + err.message.toUpperCase();
         }
     }
 
-    window.onload = getBalance;
-    setInterval(getBalance, 10000);
+    window.onload = updateUI;
 </script>
 </body>
 </html>
