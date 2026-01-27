@@ -2,72 +2,94 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - MAINNET READY</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BALOO BITE</title>
     <style>
-        body { background: #0a0a0a; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ff8c00; border-radius: 25px; padding: 40px; text-align: center; width: 350px; box-shadow: 0 0 20px rgba(255,140,0,0.2); }
-        #status { font-family: monospace; font-size: 11px; color: #00ffcc; margin-bottom: 20px; min-height: 40px; background: #000; padding: 10px; border-radius: 8px; border: 1px solid #333; }
-        .btn { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 15px; color: white; font-size: 22px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        .btn:active { transform: scale(0.98); }
+        body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #111; border: 2px solid #ff8c00; border-radius: 20px; padding: 40px; text-align: center; width: 320px; }
+        #log { background: #000; padding: 10px; font-family: monospace; font-size: 10px; color: #00ffcc; border: 1px solid #333; margin-bottom: 20px; text-align: left; min-height: 40px; }
+        .pot { font-size: 40px; font-weight: bold; color: #ffcc00; margin-bottom: 20px; }
+        .btn { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 12px; color: #fff; font-size: 20px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>BALOO BITE</h2>
-    <div id="status">SYSTEM_READY: CLICK_CHOMP</div>
-    <div id="balance" style="font-size: 32px; color: #ffcc00; margin: 20px 0;">0.00 XNT</div>
-    <button class="btn" onclick="executeTransaction()">CHOMP!</button>
+    <div id="log">SYSTEM_READY</div>
+    <div class="pot" id="pot-display">0.00</div>
+    <div style="font-size: 12px; color: #888; margin-bottom: 20px;">JACKPOT BALANCE (XNT)</div>
+    <button class="btn" onclick="executeBite()">CHOMP!</button>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
-    // CORE CONFIG
-    const TARGET_ADDR = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-    const RPC_URL = "https://x1-testnet.blockpi.network/v1/rpc/public"; // STABLE_RPC
+    const TARGET = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
+    const RPC = "https://testnet-rpc.x1.xyz";
 
-    async function updateBalance() {
-        try {
-            const conn = new solanaWeb3.Connection(RPC_URL, "confirmed");
-            const info = await conn.getAccountInfo(new solanaWeb3.PublicKey(TARGET_ADDR));
-            if(info) document.getElementById('balance').innerText = (info.lamports / 1e9).toFixed(2) + " XNT";
-        } catch(e) { console.log("FETCH_ERROR"); }
+    // 1. STABLE CONNECTION HANDLER
+    async function getConnection() {
+        return new solanaWeb3.Connection(RPC, {
+            commitment: 'confirmed',
+            disableRetryOnRateLimit: false
+        });
     }
 
-    async function executeTransaction() {
-        const provider = window.x1 || window.solana;
-        if (!provider) { alert("X1_WALLET_NOT_FOUND"); return; }
-
+    // 2. REFRESH BALANCE
+    async function refreshBalance() {
         try {
-            document.getElementById('status').innerText = "STATUS: CONNECTING_WALLET...";
-            const resp = await provider.connect();
-            
-            document.getElementById('status').innerText = "STATUS: FETCHING_BLOCKHASH...";
-            const conn = new solanaWeb3.Connection(RPC_URL, "confirmed");
-            const { blockhash } = await conn.getLatestBlockhash();
-
-            const tx = new solanaWeb3.Transaction();
-            tx.recentBlockhash = blockhash;
-            tx.feePayer = resp.publicKey;
-
-            tx.add(solanaWeb3.SystemProgram.transfer({
-                fromPubkey: resp.publicKey,
-                toPubkey: new solanaWeb3.PublicKey(TARGET_ADDR),
-                lamports: 1.0 * 1e9 // 1.0 XNT
-            }));
-
-            document.getElementById('status').innerText = "STATUS: SIGNING_TRANSACTION...";
-            const sig = await provider.signAndSendTransaction(tx);
-            
-            document.getElementById('status').innerText = "SUCCESS: " + sig.substring(0,10);
-            updateBalance();
-            alert("BITE_SUCCESSFUL!");
-        } catch (err) {
-            document.getElementById('status').innerText = "ERROR: " + err.message.toUpperCase();
+            const conn = await getConnection();
+            const balance = await conn.getBalance(new solanaWeb3.PublicKey(TARGET));
+            document.getElementById('pot-display').innerText = (balance / 1e9).toFixed(2);
+        } catch (e) {
+            document.getElementById('log').innerText = "ERROR: CONNECTION_TIMEOUT";
         }
     }
 
-    window.addEventListener('load', updateBalance);
+    // 3. CORE TRANSACTION LOGIC
+    async function executeBite() {
+        const provider = window.x1 || window.solana;
+        const log = document.getElementById('log');
+
+        if (!provider) {
+            log.innerText = "ERROR: INSTALL_X1_WALLET";
+            return;
+        }
+
+        try {
+            log.innerText = "STATUS: CONNECTING...";
+            const session = await provider.connect();
+            const userKey = session.publicKey;
+
+            log.innerText = "STATUS: SYNCING_BLOCKHASH...";
+            const conn = await getConnection();
+            const { blockhash } = await conn.getLatestBlockhash('finalized');
+
+            const transaction = new solanaWeb3.Transaction();
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = userKey;
+
+            transaction.add(
+                solanaWeb3.SystemProgram.transfer({
+                    fromPubkey: userKey,
+                    toPubkey: new solanaWeb3.PublicKey(TARGET),
+                    lamports: 1.0 * 1e9 // 1.0 XNT
+                })
+            );
+
+            log.innerText = "STATUS: AWAITING_SIGNATURE...";
+            const signed = await provider.signAndSendTransaction(transaction);
+            
+            log.innerText = "SUCCESS: " + signed.substring(0, 10);
+            refreshBalance();
+        } catch (err) {
+            log.innerText = "FAILED: " + err.message.toUpperCase().substring(0, 30);
+            console.error(err);
+        }
+    }
+
+    window.addEventListener('load', refreshBalance);
+    setInterval(refreshBalance, 15000);
 </script>
+
 </body>
 </html>
