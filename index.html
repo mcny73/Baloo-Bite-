@@ -2,54 +2,62 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - BACKPACK EDITION</title>
+    <title>BALOO BITE - BACKPACK PRO</title>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ff8c00; border-radius: 20px; padding: 40px; text-align: center; width: 340px; box-shadow: 0 0 30px rgba(255,140,0,0.4); }
+        .card { background: #111; border: 2px solid #ff8c00; border-radius: 20px; padding: 40px; text-align: center; width: 340px; box-shadow: 0 0 30px rgba(255,140,0,0.3); }
         #status { font-family: monospace; font-size: 11px; color: #00ffcc; margin-bottom: 20px; min-height: 45px; background: #000; padding: 12px; border: 1px solid #333; border-radius: 8px; text-align: left; word-break: break-all; }
-        .pot-ui { font-size: 42px; font-weight: bold; color: #ffcc00; margin-bottom: 5px; }
-        .btn-chomp { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 12px; color: #fff; font-size: 24px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .pot { font-size: 42px; font-weight: bold; color: #ffcc00; margin-bottom: 5px; }
+        .btn { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 12px; color: #fff; font-size: 24px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div id="status">BACKPACK_MODE: ACTIVE</div>
-    <div class="pot-ui" id="balance">0.00</div>
+    <div id="status">BACKPACK_CONNECTED: READY</div>
+    <div class="pot" id="display">0.00</div>
     <div style="font-size: 12px; color: #888; margin-bottom: 25px;">XNT IN THE POT</div>
-    <button class="btn-chomp" onclick="bite()">CHOMP!</button>
+    <button class="btn" onclick="runChomp()">CHOMP!</button>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
     const DEST = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-    const RPC = "https://testnet-rpc.x1.xyz";
+    const RPC_NODES = [
+        "https://x1-testnet.blockpi.network/v1/rpc/public",
+        "https://testnet-rpc.x1.xyz"
+    ];
 
     async function getPot() {
-        try {
-            const conn = new solanaWeb3.Connection(RPC, "confirmed");
-            const bal = await conn.getBalance(new solanaWeb3.PublicKey(DEST));
-            document.getElementById('balance').innerText = (bal / 1e9).toFixed(2);
-        } catch (e) { console.log("POT_FETCH_ERROR"); }
+        for(let url of RPC_NODES) {
+            try {
+                const conn = new solanaWeb3.Connection(url, "confirmed");
+                const bal = await conn.getBalance(new solanaWeb3.PublicKey(DEST));
+                document.getElementById('display').innerText = (bal / 1e9).toFixed(2);
+                return;
+            } catch(e) {}
+        }
     }
 
-    async function bite() {
-        // Specifically look for Backpack
+    async function runChomp() {
         const provider = window.backpack || window.solana;
         const log = document.getElementById('status');
 
-        if (!provider || !provider.isBackpack) {
-            alert("BACKPACK WALLET NOT DETECTED. PLEASE REFRESH PAGE.");
-            return;
-        }
-
         try {
-            log.innerText = "ACTION: CONNECTING_BACKPACK...";
-            await provider.connect();
-            
-            log.innerText = "ACTION: SYNCING_BLOCKHASH...";
-            const conn = new solanaWeb3.Connection(RPC, "confirmed");
-            const { blockhash } = await conn.getLatestBlockhash('finalized');
+            log.innerText = "ACTION: SYNCING_NETWORK...";
+            let blockhash = null;
+            let connection = null;
+
+            // Try multiple RPCs to find one that isn't blocked by your browser
+            for(let url of RPC_NODES) {
+                try {
+                    const conn = new solanaWeb3.Connection(url, "confirmed");
+                    const { blockhash: bh } = await conn.getLatestBlockhash('finalized');
+                    if(bh) { blockhash = bh; connection = conn; break; }
+                } catch(e) { console.log("Node blocked, trying next..."); }
+            }
+
+            if(!blockhash) throw new Error("NETWORK_BLOCKED_BY_BROWSER");
 
             const tx = new solanaWeb3.Transaction().add(
                 solanaWeb3.SystemProgram.transfer({
@@ -61,14 +69,12 @@
             tx.recentBlockhash = blockhash;
             tx.feePayer = provider.publicKey;
 
-            log.innerText = "ACTION: AWAITING_BACKPACK_APPROVAL...";
-            const signed = await provider.signAndSendTransaction(tx);
+            log.innerText = "ACTION: OPENING_SIGNATURE_WINDOW...";
+            const result = await provider.signAndSendTransaction(tx);
             
-            // Clean signature handling
-            const sigId = signed.signature || signed;
-            log.innerText = "SUCCESS! TX: " + sigId.toString().substring(0, 10);
-            
-            alert("BITE SUCCESSFUL!");
+            const sig = result.signature || result;
+            log.innerText = "SUCCESS! ID: " + sig.toString().substring(0, 12);
+            alert("CHOMP SUCCESSFUL!");
             getPot();
         } catch (err) {
             log.innerText = "FAILED: " + err.message.toUpperCase();
