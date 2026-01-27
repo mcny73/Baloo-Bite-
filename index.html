@@ -2,31 +2,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - STABLE V46</title>
+    <title>BALOO BITE - STABLE ENGINE</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .game-card { background: #0a0a0a; border: 5px solid #ffd700; border-radius: 25px; padding: 30px; text-align: center; width: 380px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
         .pot-value { font-size: 45px; color: #fff; text-shadow: 0 0 15px #ffd700; margin: 10px 0; }
         .slot-machine { display: flex; justify-content: center; gap: 10px; margin: 20px 0; background: #111; padding: 15px; border-radius: 20px; }
         .reel { width: 90px; height: 110px; background: #1a1a1a; border-radius: 12px; border: 3px solid #333; display: flex; align-items: center; justify-content: center; font-size: 50px; overflow: hidden; }
-        .spinning { animation: roll 0.12s linear infinite; }
-        @keyframes roll { 0% { transform: translateY(-8px); } 100% { transform: translateY(8px); } }
+        
+        .spinning { animation: roll 0.1s linear infinite; }
+        @keyframes roll { 0% { transform: translateY(-5px); } 100% { transform: translateY(5px); } }
+
         .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 24px; border-radius: 15px; text-transform: uppercase; box-shadow: 0 6px 0 #665200; }
         .btn-bite:disabled { opacity: 0.5; cursor: not-allowed; }
-        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; height: 20px; }
+        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; min-height: 20px; }
     </style>
 </head>
 <body>
     <div class="game-card">
         <div style="font-size:12px; color:#ffd700;">LIVE JACKPOT (XNT)</div>
-        <div class="pot-value" id="potDisplay">...</div>
+        <div class="pot-value" id="potDisplay">---</div>
         <div class="slot-machine">
             <div class="reel" id="re1">🦴</div>
             <div class="reel" id="re2">🦴</div>
             <div class="reel" id="re3">🦴</div>
         </div>
         <button class="btn-bite" id="mainBtn" onclick="handleBite()">BITE THE BONE</button>
-        <div id="status">READY FOR ACTION</div>
+        <div id="status">READY</div>
     </div>
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
@@ -39,9 +41,9 @@
             try {
                 const bal = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY));
                 document.getElementById('potDisplay').innerText = (bal / 1e9).toFixed(2);
-            } catch(e) {}
+            } catch(e) { console.log("RPC Delay..."); }
         }
-        setInterval(updatePot, 8000); updatePot();
+        updatePot(); setInterval(updatePot, 10000);
 
         async function handleBite() {
             const btn = document.getElementById('mainBtn');
@@ -49,10 +51,10 @@
             const reels = [document.getElementById('re1'), document.getElementById('re2'), document.getElementById('re3')];
             const provider = window.x1 || window.backpack;
 
-            if (!provider) return alert("Wallet not found!");
+            if (!provider) return alert("Install X1 Wallet!");
 
             btn.disabled = true;
-            status.innerText = "WAITING FOR WALLET...";
+            status.innerText = "OPENING WALLET...";
             reels.forEach(r => r.classList.add('spinning'));
 
             try {
@@ -62,15 +64,17 @@
                         solanaWeb3.SystemProgram.transfer({
                             fromPubkey: provider.publicKey,
                             toPubkey: new solanaWeb3.PublicKey(TREASURY),
-                            lamports: 1 * 1e9
+                            lamports: 1 * 1000000000
                         })
                     );
-                    const { blockhash } = await connection.getLatestBlockhash();
+                    const { blockhash } = await connection.getLatestBlockhash('confirmed');
                     tx.recentBlockhash = blockhash;
                     tx.feePayer = provider.publicKey;
+                    
                     await provider.signAndSendTransaction(tx);
                 }
 
+                status.innerText = "SNIFFING BONES...";
                 const items = ['🦴', '🥈', '🥇'];
                 const res = [items[Math.floor(Math.random()*3)], items[Math.floor(Math.random()*3)], items[Math.floor(Math.random()*3)]];
                 
@@ -81,13 +85,14 @@
                 }
 
                 if (res[0] === res[1] || res[1] === res[2]) {
-                    status.innerText = "FREE SPIN!";
+                    status.innerText = "FREE BARK!";
                     isFree = true; btn.innerText = "FREE BARK!"; btn.disabled = false; return;
                 } else {
                     status.innerText = "NO MATCH";
                     isFree = false;
                 }
             } catch (e) {
+                console.error(e);
                 status.innerText = "TRANSACTION CANCELED";
                 reels.forEach(r => r.classList.remove('spinning'));
                 isFree = false;
