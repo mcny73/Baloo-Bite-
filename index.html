@@ -60,7 +60,7 @@
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
-    const bones = ['🦴', '🥈', '🥇']; // White, Silver, Gold
+    const bones = ['🦴', '🥈', '🥇']; 
 
     function updateBetDisplay() {
         const val = document.getElementById('betSlider').value;
@@ -73,7 +73,6 @@
         const reels = [document.getElementById('r1'), document.getElementById('r2'), document.getElementById('r3')];
         const betAmount = document.getElementById('betSlider').value;
         
-        // Detect X1 Wallet or Backpack
         const provider = window.x1 || window.backpack;
 
         if (!provider) {
