@@ -3,45 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - ULTIMATE STABILITY</title>
+    <title>BALOO BITE - V10 ULTIMATE</title>
     <style>
-        body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #0a0a0a; border: 2px solid #333; border-radius: 15px; padding: 30px; text-align: center; width: 350px; }
+        body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
+        .card { background: #0a0a0a; border: 2px solid #333; border-radius: 15px; padding: 30px; text-align: center; width: 350px; box-shadow: 0 0 30px rgba(255,140,0,0.1); }
         .status-box { background: #001a00; color: #00ff00; padding: 15px; border: 1px solid #00ff00; font-size: 11px; margin-bottom: 25px; text-align: left; min-height: 85px; word-break: break-all; line-height: 1.4; }
-        .btn-chomp { background: #ff8c00; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 8px; text-transform: uppercase; }
+        .btn-chomp { background: #ff8c00; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 8px; text-transform: uppercase; transition: transform 0.1s; }
         .btn-chomp:disabled { background: #222; color: #666; cursor: not-allowed; }
+        .btn-chomp:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div class="status-box" id="status">V8_STABILITY: ACTIVE<br>STATUS: READY_FOR_TEST</div>
+    <div class="status-box" id="status">V10_ENGINE: ONLINE<br>STABILITY: ULTIMATE_MAX</div>
     <div style="font-size: 28px; color: #ffcc00; margin-bottom: 25px; font-weight: bold;">1.0 XNT</div>
-    <button class="btn-chomp" id="mainBtn" onclick="executeV8Chomp()">Execute Hard Chomp</button>
+    <button class="btn-chomp" id="mainBtn" onclick="executeV10Chomp()">Execute Hard Chomp</button>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 
 <script>
-    async function executeV8Chomp() {
+    async function executeV10Chomp() {
         const log = document.getElementById('status');
         const btn = document.getElementById('mainBtn');
         const provider = window.backpack;
 
+        if (!provider) {
+            log.innerHTML = "ERROR: BACKPACK NOT DETECTED";
+            return;
+        }
+
         try {
             btn.disabled = true;
-            log.innerHTML = "STATUS: FORCING SESSION RESET...";
+            log.innerHTML = "STATUS: REFRESHING HANDSHAKE...";
             
-            // Harde reset van de wallet verbinding om 'Plugin Closed' te voorkomen
-            if (provider && provider.disconnect) {
-                await provider.disconnect().catch(() => {});
-            }
-            
-            // Wacht 1 seconde zodat de browser en wallet kunnen synchroniseren
-            await new Promise(r => setTimeout(r, 1000));
+            // Harde reset van de sessie voor elke klik om 'Plugin Closed' te voorkomen
+            if (provider.disconnect) await provider.disconnect().catch(() => {});
+            await new Promise(r => setTimeout(r, 1000)); // Rustmoment voor de browser extensie
             await provider.connect();
 
-            log.innerHTML = "STATUS: PREPARING CLEAN TX...";
+            log.innerHTML = "STATUS: BUILDING SECURE TX...";
             
             const transaction = new solanaWeb3.Transaction().add(
                 solanaWeb3.SystemProgram.transfer({
@@ -52,6 +54,8 @@
             );
 
             log.innerHTML = "STATUS: AWAITING APPROVAL...<br>CHECK WALLET POPUP NOW";
+            
+            // Wallet regelt de blockhash zelf voor maximale stabiliteit
             const result = await provider.signAndSendTransaction(transaction);
             const sig = result.signature || result;
 
@@ -59,10 +63,14 @@
 
         } catch (err) {
             console.error(err);
-            log.innerHTML = "INTERRUPT: " + err.message.toUpperCase() + "<br>PLEASE WAIT FOR TIMER.";
+            if (err.message.includes('closed')) {
+                log.innerHTML = "INTERRUPT: PLUGIN_BUSY<br>AUTO-RESETTING... WAIT FOR TIMER.";
+            } else {
+                log.innerHTML = "ERROR: " + err.message.toUpperCase();
+            }
         } finally {
-            // Verlengde timer voor absolute veiligheid van de wallet-sessie
-            let countdown = 8;
+            // Verlengde timer voor absolute stabiliteit bij herhaaldelijk klikken
+            let countdown = 6;
             const timer = setInterval(() => {
                 btn.innerText = `NEXT CHOMP IN ${countdown}s`;
                 countdown--;
@@ -70,7 +78,7 @@
                     clearInterval(timer);
                     btn.disabled = false;
                     btn.innerText = "Execute Hard Chomp";
-                    if(!log.innerHTML.includes('SUCCESS')) log.innerHTML = "V8_ENGINE: STANDBY";
+                    if(!log.innerHTML.includes('SUCCESS')) log.innerHTML = "V10_ENGINE: READY";
                 }
             }, 1000);
         }
