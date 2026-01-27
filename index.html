@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - EMERGENCY FIX</title>
+    <title>BALOO BITE - V49 FINAL</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .game-card { background: #0a0a0a; border: 5px solid #ffd700; border-radius: 25px; padding: 30px; text-align: center; width: 350px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
@@ -12,14 +12,14 @@
         .spinning { animation: roll 0.1s linear infinite; }
         @keyframes roll { 0% { transform: translateY(-5px); } 100% { transform: translateY(5px); } }
         .btn-bite { background: #ffd700; color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 24px; border-radius: 15px; text-transform: uppercase; }
-        .btn-bite:disabled { opacity: 0.5; }
-        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; }
+        .btn-bite:disabled { opacity: 0.5; cursor: not-allowed; }
+        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; min-height: 20px; }
     </style>
 </head>
 <body>
     <div class="game-card">
         <div style="font-size:12px; color:#ffd700;">LIVE JACKPOT (XNT)</div>
-        <div class="pot-value" id="potDisplay">---</div>
+        <div class="pot-value" id="potDisplay">100.00</div>
         <div class="slot-machine"><div class="reel" id="re1">🦴</div><div class="reel" id="re2">🦴</div><div class="reel" id="re3">🦴</div></div>
         <button class="btn-bite" id="mainBtn" onclick="handleBite()">BITE THE BONE</button>
         <div id="status">READY</div>
@@ -27,17 +27,9 @@
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
+        // GEEN automatische verbindingen bij het laden
         const TREASURY = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        const connection = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com");
         let isFree = false;
-
-        async function updatePot() {
-            try {
-                const bal = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY));
-                document.getElementById('potDisplay').innerText = (bal / 1e9).toFixed(2);
-            } catch(e) {}
-        }
-        updatePot();
 
         async function handleBite() {
             const btn = document.getElementById('mainBtn');
@@ -46,18 +38,22 @@
             const provider = window.x1 || window.backpack;
 
             if (!provider) return alert("Install Wallet!");
+
             btn.disabled = true;
             status.innerText = "OPENING WALLET...";
             reels.forEach(r => r.classList.add('spinning'));
 
             try {
+                // De connectie wordt pas NU gemaakt
+                const connection = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com");
+                
                 if (!isFree) {
                     await provider.connect();
                     const tx = new solanaWeb3.Transaction().add(
                         solanaWeb3.SystemProgram.transfer({
                             fromPubkey: provider.publicKey,
                             toPubkey: new solanaWeb3.PublicKey(TREASURY),
-                            lamports: 1000000000
+                            lamports: 1000000000 // 1 XNT
                         })
                     );
                     const { blockhash } = await connection.getLatestBlockhash();
@@ -66,6 +62,7 @@
                     await provider.signAndSendTransaction(tx);
                 }
 
+                // Resultaat
                 const items = ['🦴', '🥈', '🥇'];
                 const res = [items[Math.floor(Math.random()*3)], items[Math.floor(Math.random()*3)], items[Math.floor(Math.random()*3)]];
                 
@@ -84,7 +81,8 @@
                     startCooldown();
                 }
             } catch (e) {
-                status.innerText = "ERROR - TRY AGAIN";
+                console.error(e);
+                status.innerText = "ERROR - REFRESH PAGE";
                 reels.forEach(r => r.classList.remove('spinning'));
                 btn.disabled = false;
             }
@@ -95,7 +93,7 @@
             let cd = 30;
             const t = setInterval(() => {
                 btn.innerText = "WAIT " + cd + "S";
-                if (cd-- <= 0) { clearInterval(t); btn.disabled = false; btn.innerText = "BITE THE BONE"; }
+                if (cd-- <= 0) { clearInterval(t); btn.disabled = false; btn.innerText = "BITE THE BONE"; status.innerText = "READY"; }
             }, 1000);
         }
     </script>
