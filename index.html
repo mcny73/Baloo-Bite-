@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - V12 FINAL BOSS</title>
+    <title>BALOO BITE - V13 FINAL</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: #0a0a0a; border: 2px solid #555; border-radius: 15px; padding: 30px; text-align: center; width: 350px; }
@@ -15,31 +15,36 @@
 <body>
 
 <div class="card">
-    <div class="status-box" id="status">V12_ENGINE: READY<br>MODE: ULTRA_STABILITY</div>
+    <div class="status-box" id="status">V13_ENGINE: READY<br>STABILITY: MASTER_MODE</div>
     <div style="font-size: 32px; color: #ffcc00; margin-bottom: 25px; font-weight: bold;">1.0 XNT</div>
-    <button class="btn-chomp" id="mainBtn" onclick="executeV12Chomp()">Execute Hard Chomp</button>
+    <button class="btn-chomp" id="mainBtn" onclick="executeV13Chomp()">Execute Hard Chomp</button>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 
 <script>
-    async function executeV12Chomp() {
+    async function executeV13Chomp() {
         const log = document.getElementById('status');
         const btn = document.getElementById('mainBtn');
         const provider = window.backpack;
 
         try {
             btn.disabled = true;
-            log.innerHTML = "PHASE 1: RESETTING WALLET STATE...";
+            log.innerHTML = "STEP 1: CLEANING PREVIOUS SESSION...";
             
-            // Geforceerde diepe reset
-            if (provider.disconnect) await provider.disconnect().catch(() => {});
-            await new Promise(r => setTimeout(r, 1500)); 
+            // Forceer een keiharde disconnect om de 'Plugin Closed' te resetten
+            if (provider.disconnect) {
+                await provider.disconnect().catch(() => {});
+            }
             
-            log.innerHTML = "PHASE 2: NEW HANDSHAKE...";
+            // We geven de wallet nu 2 volle seconden om af te koelen voor we verbinden
+            await new Promise(r => setTimeout(r, 2000)); 
+            
+            log.innerHTML = "STEP 2: INITIATING FRESH HANDSHAKE...";
             await provider.connect();
 
-            const tx = new solanaWeb3.Transaction().add(
+            log.innerHTML = "STEP 3: SIGNING TRANSACTION...";
+            const transaction = new solanaWeb3.Transaction().add(
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: provider.publicKey,
                     toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
@@ -47,15 +52,15 @@
                 })
             );
 
-            log.innerHTML = "PHASE 3: AWAITING WALLET...";
-            const result = await provider.signAndSendTransaction(tx);
+            const result = await provider.signAndSendTransaction(transaction);
             log.innerHTML = "VERIFIED SUCCESS!<br>SIG: " + result.signature.toString().substring(0, 22);
 
         } catch (err) {
             console.error(err);
-            log.innerHTML = "NOTICE: WALLET TIMEOUT<br>STABILIZING SYSTEM... PLEASE WAIT.";
+            log.innerHTML = "WALLET BUSY: STABILIZING...<br>PLEASE WAIT FOR THE TIMER.";
         } finally {
-            let countdown = 10;
+            // De 15-seconden 'God-mode' timer om ELKE fout te voorkomen
+            let countdown = 15;
             const timer = setInterval(() => {
                 btn.innerText = `COOLDOWN: ${countdown}s`;
                 countdown--;
