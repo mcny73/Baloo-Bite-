@@ -1,28 +1,30 @@
 <script>
-    // Meerdere wegen naar de blockchain
-    const RPC_ENDPOINTS = [
+    // Meerdere ingangen naar de blockchain om blokkades te omzeilen
+    const RPC_NODES = [
         "https://testnet-rpc.x1.xyz",
-        "https://x1-testnet.blockpi.network/v1/rpc/public" 
+        "https://x1-testnet.blockpi.network/v1/rpc/public",
+        "https://rpc-testnet.x1.xyz"
     ];
 
-    let currentRpcIndex = 0;
-    const TARGET_ADDR = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"; 
-    let connection = new solanaWeb3.Connection(RPC_ENDPOINTS[0], "confirmed");
+    let nodeIndex = 0;
+    let connection = new solanaWeb3.Connection(RPC_NODES[0], "confirmed");
+
+    async function tryNextNode() {
+        nodeIndex = (nodeIndex + 1) % RPC_NODES.length;
+        connection = new solanaWeb3.Connection(RPC_NODES[nodeIndex], "confirmed");
+        console.log("Switched to node: " + RPC_NODES[nodeIndex]);
+    }
 
     async function updatePot() {
         try {
-            const info = await connection.getAccountInfo(new solanaWeb3.PublicKey(TARGET_ADDR));
+            const info = await connection.getAccountInfo(new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"));
             if(info) {
                 document.getElementById('pot-display').innerText = (info.lamports / 1000000000).toFixed(2);
-                document.getElementById('status').innerText = "NETWORK ONLINE - READY";
+                document.getElementById('status').innerText = "ONLINE: " + RPC_NODES[nodeIndex].split('/')[2];
             }
         } catch(e) {
-            console.log("Switching RPC...");
-            currentRpcIndex = (currentRpcIndex + 1) % RPC_ENDPOINTS.length;
-            connection = new solanaWeb3.Connection(RPC_ENDPOINTS[currentRpcIndex], "confirmed");
-            document.getElementById('status').innerText = "RECONNECTING TO X1...";
+            await tryNextNode();
         }
     }
-
-    // De rest van de functies (init en playGame) blijven hetzelfde als in de vorige "Stable Mode" code.
+    // ... rest van de functies blijven gelijk ...
 </script>
