@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - FINAL BYPASS</title>
+    <title>BALOO BITE - FINAL BRIDGE</title>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: #111; border: 2px solid #ff8c00; border-radius: 20px; padding: 40px; text-align: center; width: 340px; }
@@ -12,51 +12,59 @@
 </head>
 <body>
     <div class="card">
-        <div id="status">BYPASS_MODE: READY</div>
+        <div id="status">TUNNEL_MODE: READY</div>
         <div style="font-size: 28px; color: #ffcc00; margin-bottom: 20px;">1.0 XNT</div>
-        <button class="btn" onclick="chomp()">CHOMP!</button>
+        <button class="btn" onclick="execute()">CHOMP!</button>
     </div>
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
-        async function chomp() {
+        const TARGET = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
+        
+        async function getHash() {
+            // We use a high-stability public proxy to bypass local browser blocks
+            const providers = [
+                "https://x1-testnet.blockpi.network/v1/rpc/public",
+                "https://testnet-rpc.x1.xyz"
+            ];
+            
+            for (let url of providers) {
+                try {
+                    const conn = new solanaWeb3.Connection(url, "confirmed");
+                    const { blockhash } = await conn.getLatestBlockhash();
+                    if (blockhash) return blockhash;
+                } catch (e) { console.log("Provider failed, trying next..."); }
+            }
+            throw new Error("ALL_PROVIDERS_BLOCKED");
+        }
+
+        async function execute() {
             const provider = window.x1 || window.solana;
-            const log = document.getElementById('status');
             if (!provider) { alert("X1_WALLET_NOT_FOUND"); return; }
 
             try {
-                log.innerText = "ACTION: CONNECTING...";
+                document.getElementById('status').innerText = "ACTION: CONNECTING...";
                 const { publicKey } = await provider.connect();
 
-                // WE DO NOT FETCH HERE. WE LET THE WALLET HANDLE THE RPC.
+                document.getElementById('status').innerText = "ACTION: TUNNELING_HASH...";
+                const hash = await getHash();
+
                 const tx = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: publicKey,
-                        toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
+                        toPubkey: new solanaWeb3.PublicKey(TARGET),
                         lamports: 1.0 * 1e9
                     })
                 );
+                tx.recentBlockhash = hash;
+                tx.feePayer = publicKey;
 
-                log.innerText = "ACTION: HANDING_TO_WALLET...";
-                
-                // signAndSendTransaction usually fetches its own blockhash if none is provided
-                const result = await provider.signAndSendTransaction(tx);
-                
-                const sig = result.signature || result;
-                log.innerText = "SUCCESS: " + sig.toString().substring(0, 10);
-                alert("BITE SUCCESSFUL!");
+                document.getElementById('status').innerText = "ACTION: OPENING_WALLET...";
+                const sig = await provider.signAndSendTransaction(tx);
+                document.getElementById('status').innerText = "SUCCESS! SIG: " + sig.toString().substring(0, 10);
+                alert("CHOMP SUCCESSFUL!");
             } catch (err) {
-                log.innerText = "FAILED: " + err.message.toUpperCase();
-                // If it fails, we try one fallback with a hardcoded connection
-                if(err.message.includes('fetch')) {
-                    log.innerText = "ATTEMPTING_RPC_FALLBACK...";
-                    const conn = new solanaWeb3.Connection("https://testnet-rpc.x1.xyz", "confirmed");
-                    const { blockhash } = await conn.getLatestBlockhash();
-                    tx.recentBlockhash = blockhash;
-                    tx.feePayer = publicKey;
-                    const sig2 = await provider.signAndSendTransaction(tx);
-                    log.innerText = "SUCCESS_FALLBACK: " + sig2.substring(0,10);
-                }
+                document.getElementById('status').innerText = "FAILED: " + err.message.toUpperCase();
             }
         }
     </script>
