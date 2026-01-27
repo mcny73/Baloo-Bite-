@@ -2,55 +2,65 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - ULTIMATE BYPASS</title>
+    <title>BALOO BITE - STRESS TEST</title>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: #111; border: 2px solid #ff8c00; border-radius: 20px; padding: 40px; text-align: center; width: 340px; }
         #status { font-family: monospace; font-size: 11px; color: #00ffcc; margin-bottom: 20px; min-height: 45px; background: #000; padding: 12px; border: 1px solid #333; border-radius: 8px; text-align: left; }
+        .pot-box { font-size: 48px; font-weight: bold; color: #ffcc00; margin-bottom: 10px; }
         .btn { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 12px; color: #fff; font-size: 24px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div id="status">BYPASS_MODE: READY</div>
-        <div style="font-size: 28px; color: #ffcc00; margin-bottom: 20px;">1.0 XNT</div>
-        <button class="btn" onclick="directChomp()">FORCE CHOMP!</button>
+        <div id="status">TESTING_PHASE: READY</div>
+        <div class="pot-box" id="pot">---</div>
+        <div style="font-size: 12px; color: #888; margin-bottom: 25px;">XNT IN THE POT</div>
+        <button class="btn" onclick="testChomp()">CHOMP!</button>
     </div>
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
-        async function directChomp() {
+        const TARGET = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
+        const RPC = "https://testnet-rpc.x1.xyz";
+
+        async function updatePot() {
+            try {
+                const conn = new solanaWeb3.Connection(RPC, "confirmed");
+                const bal = await conn.getBalance(new solanaWeb3.PublicKey(TARGET));
+                document.getElementById('pot').innerText = (bal / 1e9).toFixed(2);
+            } catch (e) { document.getElementById('pot').innerText = "SYNCING..."; }
+        }
+
+        async function testChomp() {
             const provider = window.backpack;
-            const log = document.getElementById('status');
             if (!provider) { alert("BACKPACK NOT FOUND"); return; }
 
             try {
-                log.innerText = "ACTION: WAKING_UP_BACKPACK...";
+                document.getElementById('status').innerText = "ACTION: CONNECTING...";
                 await provider.connect();
 
-                // We bouwen de transactie ZONDER blockhash eerst.
-                // Dit voorkomt de 'Failed to Fetch' error in de browser.
                 const tx = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: provider.publicKey,
-                        toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
+                        toPubkey: new solanaWeb3.PublicKey(TARGET),
                         lamports: 1.0 * 1e9
                     })
                 );
 
-                log.innerText = "ACTION: WAITING_FOR_WALLET_POPUP...";
+                document.getElementById('status').innerText = "ACTION: SENDING_BITE...";
+                const result = await provider.signAndSendTransaction(tx);
                 
-                // Backpack is slim genoeg om zelf een hash te zoeken als wij die niet geven
-                const signed = await provider.signAndSendTransaction(tx);
+                document.getElementById('status').innerText = "SUCCESS! WAITING FOR CHAIN...";
                 
-                log.innerText = "SUCCESS! SIG: " + signed.toString().substring(0,10);
-                alert("CHOMP SUCCESSFUL!");
+                // Wacht 3 seconden en update dan de pot
+                setTimeout(updatePot, 3000);
             } catch (err) {
-                // Als het hier faalt met 'blockhash required', dan blokkeert je internet echt alles.
-                log.innerText = "STATUS: " + err.message.toUpperCase();
-                console.error(err);
+                document.getElementById('status').innerText = "FAIL: " + err.message.toUpperCase();
             }
         }
+
+        window.onload = updatePot;
     </script>
 </body>
 </html>
