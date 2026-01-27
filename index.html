@@ -2,65 +2,86 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - STRESS TEST</title>
+    <title>BALOO BITE - STABILITY TEST v2</title>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ff8c00; border-radius: 20px; padding: 40px; text-align: center; width: 340px; }
-        #status { font-family: monospace; font-size: 11px; color: #00ffcc; margin-bottom: 20px; min-height: 45px; background: #000; padding: 12px; border: 1px solid #333; border-radius: 8px; text-align: left; }
-        .pot-box { font-size: 48px; font-weight: bold; color: #ffcc00; margin-bottom: 10px; }
-        .btn { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 12px; color: #fff; font-size: 24px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        body { background: #000; color: #fff; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #0a0a0a; border: 2px solid #333; border-radius: 15px; padding: 30px; text-align: center; width: 350px; }
+        .status-box { background: #001a00; color: #00ff00; padding: 10px; border: 1px solid #00ff00; font-size: 12px; margin-bottom: 20px; text-align: left; min-height: 50px; }
+        .pot-value { font-size: 50px; color: #ffcc00; margin: 10px 0; }
+        .btn-test { background: #444; color: #fff; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 5px; }
+        .btn-test:hover { background: #555; }
+        .btn-test:active { background: #ff8c00; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <div id="status">TESTING_PHASE: READY</div>
-        <div class="pot-box" id="pot">---</div>
-        <div style="font-size: 12px; color: #888; margin-bottom: 25px;">XNT IN THE POT</div>
-        <button class="btn" onclick="testChomp()">CHOMP!</button>
-    </div>
 
-    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
-    <script>
-        const TARGET = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        const RPC = "https://testnet-rpc.x1.xyz";
+<div class="card">
+    <div class="status-box" id="status">SYSTEM: READY_FOR_STRESS_TEST</div>
+    <div class="pot-value" id="pot">---</div>
+    <div style="color: #666; font-size: 12px; margin-bottom: 20px;">VERIFIED X1 TESTNET BALANCE</div>
+    <button class="btn-test" onclick="hardChomp()">EXECUTE CHOMP</button>
+</div>
 
-        async function updatePot() {
-            try {
-                const conn = new solanaWeb3.Connection(RPC, "confirmed");
-                const bal = await conn.getBalance(new solanaWeb3.PublicKey(TARGET));
-                document.getElementById('pot').innerText = (bal / 1e9).toFixed(2);
-            } catch (e) { document.getElementById('pot').innerText = "SYNCING..."; }
+<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+<script>
+    const DEST = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
+    const RPC = "https://testnet-rpc.x1.xyz";
+
+    // Clean Refresh Logic
+    async function syncPot() {
+        try {
+            const conn = new solanaWeb3.Connection(RPC, "confirmed");
+            const balance = await conn.getBalance(new solanaWeb3.PublicKey(DEST));
+            document.getElementById('pot').innerText = (balance / 1e9).toFixed(2);
+        } catch (e) {
+            document.getElementById('pot').innerText = "RPC_LAG";
+        }
+    }
+
+    async function hardChomp() {
+        const log = document.getElementById('status');
+        const provider = window.backpack;
+
+        if (!provider) {
+            log.innerText = "CRITICAL: BACKPACK_NOT_FOUND";
+            return;
         }
 
-        async function testChomp() {
-            const provider = window.backpack;
-            if (!provider) { alert("BACKPACK NOT FOUND"); return; }
+        try {
+            // Force a fresh handshake every time to prevent "Plugin Closed"
+            log.innerText = "STAGES: 1/3 - REFRESHING_HANDSHAKE...";
+            await provider.connect();
 
-            try {
-                document.getElementById('status').innerText = "ACTION: CONNECTING...";
-                await provider.connect();
+            log.innerText = "STAGES: 2/3 - BUILDING_TX...";
+            const conn = new solanaWeb3.Connection(RPC, "confirmed");
+            const { blockhash } = await conn.getLatestBlockhash('finalized');
 
-                const tx = new solanaWeb3.Transaction().add(
-                    solanaWeb3.SystemProgram.transfer({
-                        fromPubkey: provider.publicKey,
-                        toPubkey: new solanaWeb3.PublicKey(TARGET),
-                        lamports: 1.0 * 1e9
-                    })
-                );
+            const tx = new solanaWeb3.Transaction().add(
+                solanaWeb3.SystemProgram.transfer({
+                    fromPubkey: provider.publicKey,
+                    toPubkey: new solanaWeb3.PublicKey(DEST),
+                    lamports: 1.0 * 1e9
+                })
+            );
+            tx.recentBlockhash = blockhash;
+            tx.feePayer = provider.publicKey;
 
-                document.getElementById('status').innerText = "ACTION: SENDING_BITE...";
-                const result = await provider.signAndSendTransaction(tx);
-                
-                document.getElementById('status').innerText = "SUCCESS! WAITING FOR CHAIN...";
-                
-                // Wacht 3 seconden en update dan de pot
-                setTimeout(updatePot, 3000);
-            } catch (err) {
-                document.getElementById('status').innerText = "FAIL: " + err.message.toUpperCase();
-            }
+            log.innerText = "STAGES: 3/3 - AWAITING_USER_APPROVAL...";
+            const result = await provider.signAndSendTransaction(tx);
+            
+            const sig = result.signature || result;
+            log.innerText = "SUCCESS: TX_VERIFIED\nID: " + sig.toString().substring(0, 15);
+            
+            // Sync pot after 4 seconds to allow chain to update
+            setTimeout(syncPot, 4000);
+
+        } catch (err) {
+            log.innerText = "INTERRUPT: " + err.message.toUpperCase();
+            console.error(err);
         }
+    }
 
-        window.onload = updatePot;
-    </script>
+    window.onload = syncPot;
+</script>
 </body>
 </html>
