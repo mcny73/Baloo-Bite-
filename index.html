@@ -2,58 +2,75 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - FINAL TEST</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BALOO BITE - MAINNET EDITION</title>
     <style>
-        body { background: #0a0a0a; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ff8c00; border-radius: 25px; padding: 40px; text-align: center; width: 350px; }
-        #status { font-family: monospace; font-size: 11px; color: #00ffcc; margin-bottom: 20px; min-height: 40px; background: #000; padding: 10px; border-radius: 8px; }
-        .btn { background: #ff8c00; border: none; padding: 20px; width: 100%; border-radius: 15px; color: white; font-size: 22px; font-weight: bold; cursor: pointer; }
+        :root { --accent: #ff8c00; --bg: #0a0a0a; }
+        body { background: var(--bg); color: white; font-family: 'Arial', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: #111; border: 2px solid var(--accent); border-radius: 20px; padding: 30px; width: 350px; text-align: center; }
+        #log { background: #000; padding: 10px; font-family: monospace; font-size: 11px; color: #00ffcc; border-radius: 5px; margin-bottom: 20px; min-height: 40px; text-align: left; }
+        .jackpot-ui { font-size: 40px; font-weight: bold; color: #ffcc00; margin: 10px 0; }
+        .btn-main { background: var(--accent); color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-size: 20px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .btn-main:hover { opacity: 0.9; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>BALOO BITE</h2>
-    <div id="status">KLIK OP CHOMP OM TE STARTEN</div>
-    <div style="margin: 20px 0; font-size: 24px;">TEST: 1.0 XNT</div>
-    <button class="btn" onclick="play()">CHOMP!</button>
+<div class="container">
+    <div id="log">SYSTEM: STANDBY_MODE</div>
+    <div class="jackpot-ui" id="pot-display">0.00</div>
+    <div style="font-size: 12px; margin-bottom: 20px;">XNT IN JACKPOT</div>
+    
+    <button class="btn-main" onclick="executeBite()">CHOMP!</button>
+    <p style="font-size: 9px; color: #444; margin-top: 15px;">FEE SPLIT: 90% POT | 8% DEV | 2% BURN</p>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
-    const TARGET = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-    const RPC = "https://testnet-rpc.x1.xyz";
-
-    async function play() {
+    // --- GLOBAL CONFIGURATION ---
+    const DESTINATION_WALLET = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
+    const RPC_ENDPOINT = "https://testnet-rpc.x1.xyz"; // Swap to Mainnet URL later
+    
+    async function executeBite() {
+        const logElement = document.getElementById('log');
         const provider = window.x1 || window.solana;
-        if (!provider) { alert("X1 Wallet niet gevonden!"); return; }
+
+        if (!provider) {
+            logElement.innerText = "ERROR: WALLET_NOT_FOUND";
+            return;
+        }
 
         try {
-            document.getElementById('status').innerText = "VERBINDEN MET WALLET...";
-            const resp = await provider.connect();
-            const pubKey = resp.publicKey;
+            logElement.innerText = "STATUS: REQUESTING_CONNECTION...";
+            const connectionResponse = await provider.connect();
+            const userPublicKey = connectionResponse.publicKey;
 
-            document.getElementById('status').innerText = "BLOCKHASH OPHALEN...";
-            const conn = new solanaWeb3.Connection(RPC, "confirmed");
-            const { blockhash } = await conn.getLatestBlockhash();
+            logElement.innerText = "STATUS: FETCHING_BLOCKHASH...";
+            const connection = new solanaWeb3.Connection(RPC_ENDPOINT, "confirmed");
+            const { blockhash } = await connection.getLatestBlockhash();
 
-            const tx = new solanaWeb3.Transaction();
-            tx.recentBlockhash = blockhash;
-            tx.feePayer = pubKey;
+            const transaction = new solanaWeb3.Transaction();
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = userPublicKey;
 
-            tx.add(solanaWeb3.SystemProgram.transfer({
-                fromPubkey: pubKey,
-                toPubkey: new solanaWeb3.PublicKey(TARGET),
-                lamports: 1.0 * 1000000000
-            }));
+            // In mainnet version, this will call the Anchor Program
+            // For now, it's a direct transfer for testing
+            transaction.add(
+                solanaWeb3.SystemProgram.transfer({
+                    fromPubkey: userPublicKey,
+                    toPubkey: new solanaWeb3.PublicKey(DESTINATION_WALLET),
+                    lamports: 1.0 * 1000000000 // 1 XNT
+                })
+            );
 
-            document.getElementById('status').innerText = "BEVESTIG IN JE WALLET...";
-            const sig = await provider.signAndSendTransaction(tx);
-            document.getElementById('status').innerText = "SUCCES! SIG: " + sig.substring(0,8);
-            alert("BITE GELUKT!");
-        } catch (err) {
-            document.getElementById('status').innerText = "FOUT: " + err.message;
-            console.error(err);
+            logElement.innerText = "STATUS: AWAITING_SIGNATURE...";
+            const signature = await provider.signAndSendTransaction(transaction);
+            
+            logElement.innerText = "SUCCESS: SIG_" + signature.substring(0, 12);
+            alert("BITE SUCCESSFUL!");
+        } catch (error) {
+            logElement.innerText = "CRITICAL_ERROR: " + error.message;
+            console.error(error);
         }
     }
 </script>
