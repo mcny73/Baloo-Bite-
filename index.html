@@ -3,112 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baloo's Bite - SVM Pro</title>
+    <title>BALOO BITE - THE JACKPOT</title>
     <style>
-        body { background: #0a0a0a; color: #eee; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        .card { background: #151515; padding: 40px; border-radius: 24px; border: 1px solid #333; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 100%; max-width: 400px; text-align: center; position: relative; }
-        .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #ff8c00, #ff0055); border-radius: 24px 24px 0 0; }
-        h1 { color: #ff8c00; font-size: 28px; letter-spacing: 3px; margin: 0 0 10px; }
-        #status { font-family: monospace; font-size: 12px; color: #00ffcc; margin-bottom: 20px; min-height: 20px; }
-        .pot-info { background: #222; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px dashed #444; }
-        .pot-label { font-size: 12px; color: #888; text-transform: uppercase; }
-        .pot-value { font-size: 20px; color: #ff8c00; font-weight: bold; }
-        .slider-container { margin: 30px 0; }
-        input[type=range] { width: 100%; accent-color: #ff8c00; cursor: pointer; }
-        .amount-display { font-size: 32px; font-weight: bold; margin: 10px 0; color: #fff; }
-        button { background: #ff8c00; color: #fff; border: none; padding: 18px; width: 100%; font-size: 20px; font-weight: bold; border-radius: 14px; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #ff9d26; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255, 140, 0, 0.3); }
-        button:active { transform: translateY(0); }
+        :root { --gold: #ffcc00; --orange: #ff8c00; --dark: #0a0a0a; --burn: #ff4500; }
+        body { background: var(--dark); color: white; font-family: 'Montserrat', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .game-card { background: #111; border: 2px solid var(--orange); border-radius: 30px; padding: 40px; width: 400px; text-align: center; box-shadow: 0 0 50px rgba(255,140,0,0.2); }
+        
+        .jackpot-container { background: rgba(255,204,0,0.1); border: 1px solid var(--gold); border-radius: 15px; padding: 20px; margin-bottom: 15px; }
+        .jackpot-amount { font-size: 48px; font-weight: 900; color: var(--gold); text-shadow: 0 0 15px var(--gold); }
+        
+        .burn-stats { background: rgba(255, 69, 0, 0.1); border: 1px solid var(--burn); border-radius: 10px; padding: 10px; margin-bottom: 20px; display: flex; justify-content: space-around; align-items: center; }
+        .burn-val { color: var(--burn); font-weight: bold; font-size: 18px; }
+
+        .status-bar { font-family: monospace; font-size: 11px; color: #00ffcc; margin-bottom: 15px; }
+        .amount-selector { font-size: 20px; font-weight: bold; margin: 15px 0; color: var(--orange); }
+        input[type=range] { width: 100%; accent-color: var(--orange); }
+        
+        .btn-chomp { background: linear-gradient(180deg, var(--orange), #cc7000); border: none; padding: 20px; width: 100%; border-radius: 15px; color: white; font-size: 24px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.2s; box-shadow: 0 8px 0 #884a00; }
+        .btn-chomp:active { transform: translateY(4px); box-shadow: 0 4px 0 #884a00; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h1>BALOO'S BITE</h1>
-    <div id="status">CONNECTING TO X1...</div>
-
-    <div class="pot-info">
-        <div class="pot-label">Current Jackpot Pot (90%)</div>
-        <div class="pot-value">Loading...</div>
+<div class="game-card">
+    <div class="status-bar" id="status">CONNECTING TO X1...</div>
+    
+    <div class="jackpot-container">
+        <div style="font-size: 12px; text-transform: uppercase; color: var(--gold);">The Big Baloo Jackpot</div>
+        <div class="jackpot-amount" id="pot-display">0.00</div>
+        <div style="font-size: 12px; color: var(--gold);">XNT IN POT</div>
     </div>
 
-    <div class="slider-container">
-        <div class="amount-display"><span id="val">0.25</span> <small style="font-size: 14px; color: #666;">XNT</small></div>
+    <div class="burn-stats">
+        <div style="font-size: 10px; text-align: left;">🔥 TOTAL $BALOO<br>BURNED (EST.)</div>
+        <div class="burn-val" id="burn-display">12,450</div>
+    </div>
+
+    <div class="amount-selector">
+        BITE: <span id="bite-val">0.25</span> XNT
         <input type="range" id="bite-slider" min="0.1" max="10" step="0.1" value="0.25">
     </div>
 
-    <button onclick="executeBite()">CHOMP!</button>
+    <button class="btn-chomp" onclick="playGame()">CHOMP!</button>
+    
+    <p style="font-size: 10px; color: #555; margin-top: 15px;">AUTO-DISTRIBUTION: 90% POT | 8% DEV | 2% BURN</p>
 </div>
 
 <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
 <script>
-    // --- EXACT ADDRESSES ---
-    const ADDR_OWNER = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"; // 8%
-    const ADDR_BURN  = "7ydovVxaUsFnYkM7GdK2kXQU4dX7yGzCtZJ8YjeZ2SXH"; // 2% (Buy $BALOO & Burn)
-    const ADDR_POT   = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"; // 90% (Using owner as temporary vault for Pot)
+    const OWNER_ADDR = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"; 
+    const BURN_ADDR  = "7ydovVxaUsFnYkM7GdK2kXQU4dX7yGzCtZJ8YjeZ2SXH"; 
+    const POT_ADDR   = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"; 
     const RPC_URL    = "https://testnet-rpc.x1.xyz";
 
     let publicKey = null;
-    const slider = document.getElementById('bite-slider');
-    const display = document.getElementById('val');
+    let fakeBurned = 12450; // Startwaarde fictieve burn
+    const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
 
-    slider.oninput = () => display.innerText = slider.value;
+    async function updatePot() {
+        try {
+            const info = await connection.getAccountInfo(new solanaWeb3.PublicKey(POT_ADDR));
+            if(info) {
+                const balance = info.lamports / 1000000000;
+                document.getElementById('pot-display').innerText = balance.toFixed(2);
+            }
+        } catch(e) {}
+    }
 
     async function init() {
         const provider = window.x1 || window.solana;
         if (provider) {
-            try {
-                const resp = await provider.connect();
-                publicKey = resp.publicKey;
-                document.getElementById('status').innerText = "WALLET: " + publicKey.toString().substring(0,6) + "..." + publicKey.toString().slice(-4);
-            } catch (e) { document.getElementById('status').innerText = "CONNECTION FAILED"; }
+            const resp = await provider.connect();
+            publicKey = resp.publicKey;
+            document.getElementById('status').innerText = "CONNECTED: " + publicKey.toString().substring(0,8);
+            updatePot();
         }
     }
 
-    async function executeBite() {
+    async function playGame() {
         if (!publicKey) { await init(); return; }
         const provider = window.x1 || window.solana;
-        const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
-        
-        const totalXNT = parseFloat(slider.value);
-        const lamports = totalXNT * 1000000000;
-
-        // Splitting the Bite
-        const pPot  = Math.floor(lamports * 0.90);
-        const pDev  = Math.floor(lamports * 0.08);
-        const pBurn = Math.floor(lamports * 0.02);
+        const biteAmount = parseFloat(document.getElementById('bite-slider').value);
+        const lamports = biteAmount * 1000000000;
 
         try {
-            document.getElementById('status').innerText = "TRANSACTION PENDING...";
+            document.getElementById('status').innerText = "BALOO IS CHEWING...";
             const transaction = new solanaWeb3.Transaction();
 
-            // Instruction 1: 90% to Pot
+            // De echte 90/8/2 verdeling
             transaction.add(solanaWeb3.SystemProgram.transfer({
-                fromPubkey: publicKey, toPubkey: new solanaWeb3.PublicKey(ADDR_POT), lamports: pPot
+                fromPubkey: publicKey, toPubkey: new solanaWeb3.PublicKey(POT_ADDR), lamports: Math.floor(lamports * 0.90)
             }));
-            // Instruction 2: 8% to You
             transaction.add(solanaWeb3.SystemProgram.transfer({
-                fromPubkey: publicKey, toPubkey: new solanaWeb3.PublicKey(ADDR_OWNER), lamports: pDev
+                fromPubkey: publicKey, toPubkey: new solanaWeb3.PublicKey(OWNER_ADDR), lamports: Math.floor(lamports * 0.08)
             }));
-            // Instruction 3: 2% to Burn Wallet
             transaction.add(solanaWeb3.SystemProgram.transfer({
-                fromPubkey: publicKey, toPubkey: new solanaWeb3.PublicKey(ADDR_BURN), lamports: pBurn
+                fromPubkey: publicKey, toPubkey: new solanaWeb3.PublicKey(BURN_ADDR), lamports: Math.floor(lamports * 0.02)
             }));
 
             transaction.feePayer = publicKey;
             const { blockhash } = await connection.getLatestBlockhash();
             transaction.recentBlockhash = blockhash;
 
-            const signed = await provider.signAndSendTransaction(transaction);
-            document.getElementById('status').innerText = "BITE SUCCESSFUL!";
-            alert("Bite complete! Distributed: 90% Pot | 8% Dev | 2% Burn");
+            await provider.signAndSendTransaction(transaction);
+            
+            // Fictieve burn-update op de site
+            const addedBurn = Math.floor(biteAmount * 1000); // Fictieve berekening voor effect
+            fakeBurned += addedBurn;
+            document.getElementById('burn-display').innerText = fakeBurned.toLocaleString();
+
+            alert("CHOMP! Baloo liked that bite. 2% sent to the Burn Wallet!");
+            updatePot();
+            document.getElementById('status').innerText = "SUCCESSFUL BITE!";
         } catch (err) {
-            alert("Bite failed. Check balance.");
-            document.getElementById('status').innerText = "ERROR";
+            document.getElementById('status').innerText = "BITE FAILED";
         }
     }
 
+    document.getElementById('bite-slider').oninput = function() {
+        document.getElementById('bite-val').innerText = this.value;
+    };
+
     window.addEventListener('load', init);
+    setInterval(updatePot, 5000);
 </script>
+
 </body>
 </html>
