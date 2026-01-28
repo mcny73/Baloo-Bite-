@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - STABLE ENGINE</title>
+    <title>BALOO BITE - X1 TESTNET</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .game-card { background: #0a0a0a; border: 4px solid #ffd700; border-radius: 20px; padding: 25px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
@@ -26,14 +26,15 @@
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
         const TREASURY = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        const X1_RPC = "https://rpc.testnet.x1.xyz"; // Change to mainnet when ready
-        const connection = new solanaWeb3.Connection(X1_RPC, "confirmed");
+        const X1_TESTNET_RPC = "https://rpc.testnet.x1.xyz"; 
+        // Forceer verbinding met het juiste cluster
+        const connection = new solanaWeb3.Connection(X1_TESTNET_RPC, { commitment: "confirmed" });
 
         async function updatePot() {
             try {
                 const bal = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY));
                 document.getElementById('potDisplay').innerText = (bal / 1e9).toFixed(2);
-            } catch(e) {}
+            } catch(e) { console.error("Balance sync error"); }
         }
         updatePot();
 
@@ -42,16 +43,18 @@
             const status = document.getElementById('status');
             const provider = window.backpack || window.x1;
 
-            if (!provider) return alert("Wallet not found!");
+            if (!provider) return alert("Please open Backpack or X1 Wallet!");
+            
             btn.disabled = true;
             status.innerText = "CONNECTING...";
 
             try {
+                // Stap 1: Connect zonder alert blokkade
                 await provider.connect();
-                status.innerText = "SIGNING TRANSACTION...";
+                status.innerText = "WAITING FOR CONFIRMATION...";
 
-                // This is the core logic that worked before
-                const tx = new solanaWeb3.Transaction().add(
+                // Stap 2: Transactie opbouw
+                const transaction = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: provider.publicKey,
                         toPubkey: new solanaWeb3.PublicKey(TREASURY),
@@ -59,24 +62,27 @@
                     })
                 );
 
-                const { blockhash } = await connection.getLatestBlockhash();
-                tx.recentBlockhash = blockhash;
-                tx.feePayer = provider.publicKey;
+                // Stap 3: Haal verse blockhash van Testnet
+                const { blockhash } = await connection.getLatestBlockhash('finalized');
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = provider.publicKey;
                 
-                const signature = await provider.signAndSendTransaction(tx);
-                status.innerText = "SUCCESS! 2% FEE SENT TO BALOO";
-                updatePot();
+                // Stap 4: Verzenden en wachten op resultaat
+                const signature = await provider.signAndSendTransaction(transaction);
+                status.innerText = "TX SUCCESS! BURNING 2% BALOO...";
+                
+                // Update het saldo op het scherm na 2 seconden
+                setTimeout(updatePot, 2000);
 
             } catch (err) {
-                console.error(err);
+                console.error("TX Error:", err);
                 if (err.code === -32002) {
-                    status.innerText = "PENDING REQUEST IN WALLET";
-                    alert("Please open Backpack and REJECT any pending requests first!");
+                    status.innerText = "WALLET BUSY - CLEAR PENDING";
                 } else {
-                    status.innerText = "ERROR - PLEASE RETRY";
+                    status.innerText = "ERROR - TRY AGAIN";
                 }
             }
-            setTimeout(() => { btn.disabled = false; status.innerText = "READY"; }, 4000);
+            setTimeout(() => { btn.disabled = false; status.innerText = "READY"; }, 5000);
         }
     </script>
 </body>
