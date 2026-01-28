@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - X1 OFFICIAL</title>
+    <title>BALOO BITE - X1 TESTNET</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .game-card { background: #0a0a0a; border: 4px solid #ffd700; border-radius: 20px; padding: 25px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
@@ -20,19 +20,29 @@
 <body>
     <div class="game-card">
         <div class="pot-container">
-            <div style="font-size: 10px; color: #ffd700;">TREASURY (XNT)</div>
-            <div class="pot-value" id="potDisplay">100.00</div>
+            <div style="font-size: 10px; color: #ffd700;">TESTNET TREASURY</div>
+            <div class="pot-value" id="potDisplay">---</div>
         </div>
         <div class="slot-machine"><div class="reel" id="re1">🦴</div><div class="reel" id="re2">🦴</div><div class="reel" id="re3">🦴</div></div>
         <button class="btn-bite" id="mainBtn" onclick="runBite()">BITE THE BONE</button>
-        <div id="status">READY TO PUMP $BALOO</div>
+        <div id="status">X1 TESTNET READY</div>
     </div>
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
         const TREASURY = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        // Locked to your X1 Mainnet RPC
-        const X1_RPC = "https://rpc.mainnet.x1.xyz"; 
+        // Switched to X1 TESTNET RPC
+        const X1_RPC = "https://rpc.testnet.x1.xyz"; 
+        const connection = new solanaWeb3.Connection(X1_RPC, "confirmed");
+
+        // Simple Jackpot Check (Testnet)
+        async function updatePot() {
+            try {
+                const bal = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY));
+                document.getElementById('potDisplay').innerText = (bal / 1e9).toFixed(2);
+            } catch(e) { document.getElementById('potDisplay').innerText = "LOADED"; }
+        }
+        updatePot();
 
         async function runBite() {
             const btn = document.getElementById('mainBtn');
@@ -40,22 +50,20 @@
             const reels = [document.getElementById('re1'), document.getElementById('re2'), document.getElementById('re3')];
             const provider = window.x1 || window.backpack;
 
-            if (!provider) return alert("X1 Wallet not detected!");
+            if (!provider) return alert("X1 Wallet not found!");
 
             btn.disabled = true;
-            status.innerText = "LAUNCHING X1...";
+            status.innerText = "OPENING X1 TESTNET...";
             reels.forEach(r => r.classList.add('spinning'));
 
             try {
-                // Connection established ONLY on user click to prevent 403 blocks
-                const connection = new solanaWeb3.Connection(X1_RPC, "confirmed");
                 await provider.connect();
                 
                 const tx = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: provider.publicKey,
                         toPubkey: new solanaWeb3.PublicKey(TREASURY),
-                        lamports: 1000000000 // 1 XNT
+                        lamports: 1000000000 // 1 Test-XNT
                     })
                 );
 
@@ -64,21 +72,21 @@
                 tx.feePayer = provider.publicKey;
                 
                 await provider.signAndSendTransaction(tx);
-                status.innerText = "TX CONFIRMED!";
+                status.innerText = "TESTNET TX SUCCESS!";
 
                 const symbols = ['🦴', '🥈', '🥇'];
                 const res = [symbols[Math.floor(Math.random()*3)], symbols[Math.floor(Math.random()*3)], symbols[Math.floor(Math.random()*3)]];
                 
                 for (let i = 0; i < 3; i++) {
                     await new Promise(r => setTimeout(r, 600));
-                    reels[i].classList.remove('spinning');
-                    reels[i].innerText = res[i];
+                    reelElements = reels[i];
+                    reelElements.classList.remove('spinning');
+                    reelElements.innerText = res[i];
                 }
-                status.innerText = "2% FEE SENT TO BALOO BURN";
+                status.innerText = "PLAY COMPLETE";
 
             } catch (err) {
-                // Fixes the "Transaction Canceled" hang
-                status.innerText = "RETRY REQUIRED";
+                status.innerText = "TESTNET ERROR - RETRY";
                 reels.forEach(r => r.classList.remove('spinning'));
                 console.error(err);
             }
