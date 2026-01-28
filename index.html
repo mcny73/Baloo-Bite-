@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - FULL AUTO BURN</title>
+    <title>BALOO BITE - WIN XNT</title>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
     <style>
@@ -15,7 +15,7 @@
         .reel { width: 90px; height: 110px; background: #f9f9f9; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 3.8rem; color: #333; border: 5px solid #7f8c8d; }
         .btn { background: #f39c12; color: white; border: none; padding: 18px 0; width: 100%; font-size: 1.8rem; font-family: 'Permanent Marker', cursive; cursor: pointer; border-radius: 50px; transition: 0.3s; box-shadow: 0 5px 0 #d35400; }
         .btn:hover { background: #e67e22; transform: translateY(-2px); }
-        .btn:disabled { background: #7f8c8d; box-shadow: none; cursor: not-allowed; }
+        .btn:disabled { background: #7f8c8d; box-shadow: none; cursor: not-allowed; transform: none; }
         #status { margin-top: 25px; font-size: 1.4rem; color: #f1c40f; min-height: 1.6rem; }
         .wallet-btn { position: absolute; top: 20px; right: 20px; background: transparent; border: 2px solid #f39c12; color: #f39c12; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-family: 'Permanent Marker', cursive; }
     </style>
@@ -40,19 +40,26 @@
         const RPC_URL = "https://rpc.testnet.x1.xyz";
 
         async function connectWallet() {
-            const provider = window.backpack || window.solana;
-            if (!provider) return alert("INSTALL BACKPACK!");
-            const resp = await provider.connect();
-            walletAddress = resp.publicKey.toString();
-            document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
-            document.getElementById('status').innerText = "LINKED + LOADED!";
+            try {
+                const provider = window.backpack || window.solana;
+                if (!provider) return alert("INSTALL BACKPACK!");
+                const resp = await provider.connect();
+                walletAddress = resp.publicKey.toString();
+                document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
+                document.getElementById('status').innerText = "CONNECTED!";
+            } catch (err) { console.error(err); }
         }
 
         async function playGame() {
-            if (!walletAddress) return await connectWallet();
+            const playBtn = document.getElementById('playBtn');
             const statusEl = document.getElementById('status');
-            statusEl.innerText = "SIGNING BITE...";
+
+            if (!walletAddress) return await connectWallet();
             
+            // Blokkeer de knop om dubbele kliks (-32002) te voorkomen
+            playBtn.disabled = true;
+            statusEl.innerText = "CHECK WALLET...";
+
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
                 const transaction = new solanaWeb3.Transaction().add(
@@ -69,7 +76,6 @@
                 
                 statusEl.innerText = "SPINNING...";
                 
-                // BELANGRIJK: We roepen de API aan
                 const response = await fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -80,10 +86,12 @@
                 if (response.ok) {
                     startSpinAnim(result.symbols, result.message);
                 } else {
-                    statusEl.innerText = "ERROR - TRY AGAIN";
+                    throw new Error("Backend error");
                 }
             } catch (err) {
+                console.error(err);
                 statusEl.innerText = "ERROR - TRY AGAIN";
+                playBtn.disabled = false;
             }
         }
 
@@ -100,6 +108,7 @@
                     document.getElementById('reel2').innerText = symbols[1];
                     document.getElementById('reel3').innerText = symbols[2];
                     document.getElementById('status').innerText = msg;
+                    document.getElementById('playBtn').disabled = false;
                 }
             }, 100);
         }
