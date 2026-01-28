@@ -57,17 +57,22 @@
             if (!walletAddress) return await connectWallet();
             
             playBtn.disabled = true;
-            statusEl.innerText = "FORCING BITE...";
+            statusEl.innerText = "PREPARING BITE...";
 
             try {
-                const connection = new solanaWeb3.Connection(RPC_URL, "finalized");
-                const { blockhash } = await connection.getLatestBlockhash("finalized");
+                const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
+                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
                 
-                // We voegen extra gas priority toe om de testnet-verstopping te omzeilen
                 const transaction = new solanaWeb3.Transaction();
-                transaction.recentBlockhash = blockhash;
-                transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
                 
+                // 1. ADD PRIORITY FEE (De oplossing voor het weigeren)
+                // Dit dwingt het netwerk om de tx serieus te nemen
+                const priorityFeeInstruction = solanaWeb3.ComputeBudgetProgram.setComputeUnitPrice({
+                    microLamports: 10000 
+                });
+                transaction.add(priorityFeeInstruction);
+
+                // 2. ADD TRANSFER
                 transaction.add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: new solanaWeb3.PublicKey(walletAddress),
@@ -76,28 +81,47 @@
                     })
                 );
 
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
+
                 const provider = window.backpack;
-                // We gebruiken de sign-only methode om meer controle te hebben over het versturen
+                
+                // 3. SEND RAW (Bypass Backpack checks)
                 const signedTx = await provider.signTransaction(transaction);
                 const signature = await connection.sendRawTransaction(signedTx.serialize(), {
-                    skipPreflight: true, // Belangrijk: negeer de simulatie-fout van Backpack
+                    skipPreflight: true,
                     maxRetries: 5
                 });
                 
+                statusEl.innerText = "CONFIRMING ON CHAIN...";
+                
+                // 4. WACHT OP ECHTE BEVESTIGING
+                // Als dit faalt, start de animatie NIET en weten we dat het geld niet weg is
+                const confirmation = await connection.confirmTransaction({
+                    signature,
+                    blockhash,
+                    lastValidBlockHeight
+                }, "confirmed");
+
+                if (confirmation.value.err) {
+                    throw new Error("Transaction failed on chain");
+                }
+
+                // Pas als we hier zijn, is het geld ECHT weg.
                 statusEl.innerText = "SPINNING...";
                 
-                // Trigger de fee-verdeling
+                // Trigger backend voor Koper 10
                 fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ signature, player: walletAddress })
                 });
 
-                startSpinAnim(['🐾', '🐾', '🐾'], "SUCCESS! 🔥");
+                startSpinAnim(['🐾', '🐾', '🐾'], "BITE SUCCESSFUL! 🔥");
 
             } catch (err) {
                 console.error(err);
-                statusEl.innerText = "RETRY BITE";
+                statusEl.innerText = "CHAIN REJECTED TX"; // Duidelijke foutmelding
                 playBtn.disabled = false;
             }
         }
@@ -109,7 +133,7 @@
                 document.getElementById('reel1').innerText = items[Math.floor(Math.random()*4)];
                 document.getElementById('reel2').innerText = items[Math.floor(Math.random()*4)];
                 document.getElementById('reel3').innerText = items[Math.floor(Math.random()*4)];
-                if (++spins > 15) {
+                if (++spins > 20) {
                     clearInterval(interval);
                     document.getElementById('reel1').innerText = symbols[0];
                     document.getElementById('reel2').innerText = symbols[1];
