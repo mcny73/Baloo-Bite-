@@ -37,11 +37,11 @@
     <script>
         let walletAddress = null;
         
-        // BUYER 1 ADDRESS (Treasury)
+        // BUYER 1 (Treasury)
         const TREASURY_WALLET = "39fuVmCFZDpoirjpMoJUoBmWTj27c3Vk69hFf48QGtPe";
         
-        // MAINNET RPC
-        const RPC_URL = "https://rpc.x1.xyz"; 
+        // MAINNET RPC (Corrected)
+        const RPC_URL = "https://rpc.mainnet.x1.xyz"; 
 
         async function connectWallet() {
             try {
@@ -73,79 +73,3 @@
         async function playGame() {
             const playBtn = document.getElementById('playBtn');
             const statusEl = document.getElementById('status');
-
-            if (!walletAddress) {
-                await connectWallet();
-                if (!walletAddress) return;
-            }
-            
-            playBtn.disabled = true;
-            statusEl.innerText = "CHECK WALLET...";
-
-            try {
-                const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
-                const { blockhash } = await connection.getLatestBlockhash();
-                
-                const transaction = new solanaWeb3.Transaction().add(
-                    solanaWeb3.SystemProgram.transfer({
-                        fromPubkey: new solanaWeb3.PublicKey(walletAddress),
-                        toPubkey: new solanaWeb3.PublicKey(TREASURY_WALLET),
-                        lamports: 1000000000 // 1 XNT
-                    })
-                );
-                transaction.recentBlockhash = blockhash;
-                transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
-
-                const provider = window.backpack || window.solana;
-                
-                // STANDARD METHOD (Green Checkmark)
-                const { signature } = await provider.signAndSendTransaction(transaction);
-                
-                statusEl.innerText = "SPINNING...";
-                
-                // Call Backend
-                const response = await fetch('/api/play', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ signature, player: walletAddress })
-                });
-
-                const result = await response.json();
-
-                // Start Animation with result
-                startSpinAnim(result.symbols || ['🐾','🐾','🐾'], result.message || "BITE COMPLETE!");
-
-                // Update Balance after delay
-                setTimeout(updateTreasuryBalance, 3000);
-
-            } catch (err) {
-                console.error("Tx Error:", err);
-                statusEl.innerText = "TRY AGAIN";
-                playBtn.disabled = false;
-            }
-        }
-
-        function startSpinAnim(symbols, msg) {
-            let spins = 0;
-            const items = ['🐾', '🦴', '🥈', '🥇'];
-            const interval = setInterval(() => {
-                document.getElementById('reel1').innerText = items[Math.floor(Math.random()*4)];
-                document.getElementById('reel2').innerText = items[Math.floor(Math.random()*4)];
-                document.getElementById('reel3').innerText = items[Math.floor(Math.random()*4)];
-                if (++spins > 20) {
-                    clearInterval(interval);
-                    document.getElementById('reel1').innerText = symbols[0];
-                    document.getElementById('reel2').innerText = symbols[1];
-                    document.getElementById('reel3').innerText = symbols[2];
-                    document.getElementById('status').innerText = msg;
-                    document.getElementById('playBtn').disabled = false;
-                }
-            }, 100);
-        }
-        
-        window.onload = () => {
-             updateTreasuryBalance();
-        };
-    </script>
-</body>
-</html>
