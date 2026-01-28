@@ -16,10 +16,10 @@ export default async function handler(req, res) {
         const koper10_BurnWallet = new PublicKey("4fVpY8vMvVzT9uR7nJ3xL5k2H1g9f8D7s6A5S4D3F2G1"); // Koper 10
 
         const betAmount = 1000000000; // 1 XNT
-        const devFee = betAmount * 0.08;
-        const burnFee = betAmount * 0.02;
+        const devFee = 80000000;      // 0.08 XNT
+        const burnFee = 20000000;     // 0.02 XNT
 
-        // EXECUTE AUTOMATED DISTRIBUTION
+        // 1. EXECUTE DISTRIBUTION (8% and 2%)
         const feeTx = new Transaction().add(
             SystemProgram.transfer({
                 fromPubkey: treasuryKeypair.publicKey,
@@ -33,16 +33,17 @@ export default async function handler(req, res) {
             })
         );
         
-        const feeSig = await connection.sendTransaction(feeTx, [treasuryKeypair]);
+        // Send and don't wait for confirmation to keep UI fast
+        connection.sendTransaction(feeTx, [treasuryKeypair]);
 
-        // GAME LOGIC
-        const reels = ['🐾', '🦴', '🥈', '🥇'];
-        const s1 = reels[Math.floor(Math.random() * reels.length)];
-        const s2 = reels[Math.floor(Math.random() * reels.length)];
-        const s3 = reels[Math.floor(Math.random() * reels.length)];
+        // 2. GENERATE SLOTS RESULT
+        const items = ['🐾', '🦴', '🥈', '🥇'];
+        const s1 = items[Math.floor(Math.random() * items.length)];
+        const s2 = items[Math.floor(Math.random() * items.length)];
+        const s3 = items[Math.floor(Math.random() * items.length)];
         
         let winAmount = 0;
-        let message = "BET LOST - $BALOO BURNED! 🔥";
+        let message = "BALOO BITE: $BALOO BURNED! 🔥";
 
         if (s1 === s2 && s2 === s3) {
             if (s1 === '🥇') { winAmount = betAmount * 50; message = "JACKPOT! 50X WIN!"; }
@@ -50,6 +51,7 @@ export default async function handler(req, res) {
             else { winAmount = betAmount * 2; message = "NICE! 2X WIN!"; }
         }
 
+        // 3. PAYOUT IF WINNER
         if (winAmount > 0) {
             const payTx = new Transaction().add(
                 SystemProgram.transfer({
@@ -61,14 +63,15 @@ export default async function handler(req, res) {
             await connection.sendTransaction(payTx, [treasuryKeypair]);
         }
 
-        res.status(200).json({
+        // 4. RESPOND IMMEDIATELY TO UI
+        return res.status(200).json({
             symbols: [s1, s2, s3],
             message: message,
-            burnDetail: `2% $BALOO Buy-back sent to Koper 10! 🔥`,
-            tx: feeSig
+            burnDetail: "2% $BALOO Buy-back sent to Koper 10! 🔥"
         });
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("Internal Error:", err);
+        return res.status(500).json({ error: "Game Processed but UI sync failed. Check Wallet." });
     }
 }
