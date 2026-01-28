@@ -57,27 +57,28 @@
             if (!walletAddress) return await connectWallet();
             
             playBtn.disabled = true;
-            statusEl.innerText = "SIGNING...";
+            statusEl.innerText = "WAITING FOR CHAIN...";
 
             try {
-                const connection = new solanaWeb3.Connection(RPC_URL, { commitment: 'finalized' });
-                const { blockhash } = await connection.getLatestBlockhash('finalized');
+                const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
+                const { blockhash } = await connection.getLatestBlockhash("confirmed");
                 
-                const transaction = new solanaWeb3.Transaction().add(
+                const transaction = new solanaWeb3.Transaction();
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
+                
+                transaction.add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: new solanaWeb3.PublicKey(walletAddress),
                         toPubkey: new solanaWeb3.PublicKey(TREASURY_WALLET),
                         lamports: 1000000000
                     })
                 );
-                transaction.recentBlockhash = blockhash;
-                transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
 
-                const { signature } = await window.backpack.signAndSendTransaction(transaction);
+                const provider = window.backpack;
+                const { signature } = await provider.signAndSendTransaction(transaction);
                 
-                statusEl.innerText = "BURNING...";
-
-                // API aanroep voor de 2% fee naar Koper 10 op de achtergrond
+                // We sturen de signature direct naar de backend
                 fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
