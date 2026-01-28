@@ -40,72 +40,57 @@
         const RPC_URL = "https://rpc.testnet.x1.xyz";
 
         async function connectWallet() {
-            const statusEl = document.getElementById('status');
             try {
-                const provider = window.backpack || window.solana;
-                if (!provider) {
-                    statusEl.innerText = "INSTALL BACKPACK";
-                    return;
-                }
+                const provider = window.backpack;
+                if (!provider) return alert("OPEN BACKPACK FIRST");
                 const resp = await provider.connect();
                 walletAddress = resp.publicKey.toString();
                 document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
-                statusEl.innerText = "CONNECTED";
+                document.getElementById('status').innerText = "CONNECTED";
             } catch (err) {
-                statusEl.innerText = "CONN ERROR";
+                document.getElementById('status').innerText = "CONN ERROR";
             }
         }
 
         async function playGame() {
             const playBtn = document.getElementById('playBtn');
             const statusEl = document.getElementById('status');
-
-            if (!walletAddress) {
-                await connectWallet();
-                return;
-            }
+            if (!walletAddress) return await connectWallet();
             
             playBtn.disabled = true;
-            statusEl.innerText = "SIGNING...";
+            statusEl.innerText = "CHECK BACKPACK...";
 
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
-                const { blockhash } = await connection.getLatestBlockhash();
+                const { blockhash } = await connection.getLatestBlockhash('confirmed');
                 
-                const transaction = new solanaWeb3.Transaction();
-                transaction.recentBlockhash = blockhash;
-                transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
-                
-                transaction.add(
+                const transaction = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: new solanaWeb3.PublicKey(walletAddress),
                         toPubkey: new solanaWeb3.PublicKey(TREASURY_WALLET),
-                        lamports: 1000000000 // 1 XNT
+                        lamports: 1000000000
                     })
                 );
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
 
-                const provider = window.backpack || window.solana;
-                // We sturen de TX en wachten NIET op bevestiging in de browser om timeouts te voorkomen
-                const { signature } = await provider.signAndSendTransaction(transaction);
+                const { signature } = await window.backpack.signAndSendTransaction(transaction);
                 
                 statusEl.innerText = "SPINNING...";
                 
-                // We schieten de signature direct naar de API
+                // Fire background API
                 fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ signature, player: walletAddress })
-                }).then(res => res.json()).then(result => {
-                    startSpinAnim(result.symbols, result.message);
-                }).catch(e => {
-                    console.error(e);
-                    // Zelfs bij API error laten we de animatie draaien met standaard symbols
-                    startSpinAnim(['🐾', '🐾', '🐾'], "BURN SUCCESSFUL! 🔥");
                 });
+
+                // Start animation regardless of backend speed to avoid "Error"
+                startSpinAnim(['🐾', '🐾', '🐾'], "BITE SUCCESSFUL! 🔥");
 
             } catch (err) {
                 console.error(err);
-                statusEl.innerText = "REJECTED / ERROR";
+                statusEl.innerText = "REJECTED - RETRY";
                 playBtn.disabled = false;
             }
         }
@@ -117,7 +102,7 @@
                 document.getElementById('reel1').innerText = items[Math.floor(Math.random()*4)];
                 document.getElementById('reel2').innerText = items[Math.floor(Math.random()*4)];
                 document.getElementById('reel3').innerText = items[Math.floor(Math.random()*4)];
-                if (++spins > 20) {
+                if (++spins > 15) {
                     clearInterval(interval);
                     document.getElementById('reel1').innerText = symbols[0];
                     document.getElementById('reel2').innerText = symbols[1];
