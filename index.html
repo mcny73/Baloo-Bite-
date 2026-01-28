@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - WIN XNT</title>
+    <title>BALOO BITE</title>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
     <style>
@@ -31,7 +31,7 @@
             <div id="reel3" class="reel">🐾</div>
         </div>
         <button class="btn" id="playBtn" onclick="playGame()">BITE (1 XNT)</button>
-        <div id="status">READY TO BARK?</div>
+        <div id="status">READY?</div>
     </div>
 
     <script>
@@ -42,12 +42,14 @@
         async function connectWallet() {
             try {
                 const provider = window.backpack || window.solana;
-                if (!provider) return alert("INSTALL BACKPACK!");
+                if (!provider) return alert("INSTALL BACKPACK WALLET");
                 const resp = await provider.connect();
                 walletAddress = resp.publicKey.toString();
                 document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
-                document.getElementById('status').innerText = "CONNECTED!";
-            } catch (err) { console.error(err); }
+                document.getElementById('status').innerText = "CONNECTED";
+            } catch (err) { 
+                console.error(err); 
+            }
         }
 
         async function playGame() {
@@ -56,9 +58,8 @@
 
             if (!walletAddress) return await connectWallet();
             
-            // Blokkeer de knop om dubbele kliks (-32002) te voorkomen
             playBtn.disabled = true;
-            statusEl.innerText = "CHECK WALLET...";
+            statusEl.innerText = "SIGNING...";
 
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
@@ -72,8 +73,8 @@
 
                 const { signature } = await window.backpack.signAndSendTransaction(transaction);
                 statusEl.innerText = "CONFIRMING...";
-                await connection.confirmTransaction(signature);
                 
+                await connection.confirmTransaction(signature, "confirmed");
                 statusEl.innerText = "SPINNING...";
                 
                 const response = await fetch('/api/play', {
@@ -86,7 +87,7 @@
                 if (response.ok) {
                     startSpinAnim(result.symbols, result.message);
                 } else {
-                    throw new Error("Backend error");
+                    throw new Error("API Error");
                 }
             } catch (err) {
                 console.error(err);
@@ -103,15 +104,3 @@
                 document.getElementById('reel2').innerText = items[Math.floor(Math.random()*4)];
                 document.getElementById('reel3').innerText = items[Math.floor(Math.random()*4)];
                 if (++spins > 20) {
-                    clearInterval(interval);
-                    document.getElementById('reel1').innerText = symbols[0];
-                    document.getElementById('reel2').innerText = symbols[1];
-                    document.getElementById('reel3').innerText = symbols[2];
-                    document.getElementById('status').innerText = msg;
-                    document.getElementById('playBtn').disabled = false;
-                }
-            }, 100);
-        }
-    </script>
-</body>
-</html>
