@@ -37,50 +37,36 @@
     <script>
         let walletAddress = null;
         const TREASURY_WALLET = "39fuVmCFZDpoirjpMoJUoBmWTj27c3Vk69hFf48QGtPe";
-        const RPC_URL = "https://rpc.testnet.x1.xyz";
+        // RPC URL
+        const RPC_URL = "https://rpc.testnet.x1.xyz"; 
 
-        // 1. SIMPLE CONNECTION LOGIC
         async function connectWallet() {
             try {
-                // We specifically look for Backpack first
                 const provider = window.backpack || window.solana;
-                if (!provider) return alert("Backpack not found");
-                
+                if (!provider) return alert("Install Backpack");
                 const resp = await provider.connect();
                 walletAddress = resp.publicKey.toString();
-                
                 document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
                 document.getElementById('status').innerText = "CONNECTED";
-                console.log("Connected to:", walletAddress);
             } catch (err) {
                 console.error(err);
-                document.getElementById('status').innerText = "CONN FAILED";
             }
         }
 
-        // 2. SIMPLEST TRANSACTION LOGIC POSSIBLE
         async function playGame() {
             const playBtn = document.getElementById('playBtn');
             const statusEl = document.getElementById('status');
 
-            if (!walletAddress) {
-                await connectWallet();
-                if (!walletAddress) return;
-            }
+            if (!walletAddress) return await connectWallet();
             
             playBtn.disabled = true;
-            statusEl.innerText = "OPENING WALLET...";
+            statusEl.innerText = "CHECK BACKPACK...";
 
             try {
-                // Basic connection
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
-                
-                // Get fresh blockhash (Standard method)
                 const { blockhash } = await connection.getLatestBlockhash();
-
-                // Create Transaction - NO CUSTOM FEES, NO COMPUTELIMITS
-                const transaction = new solanaWeb3.Transaction();
-                transaction.add(
+                
+                const transaction = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: new solanaWeb3.PublicKey(walletAddress),
                         toPubkey: new solanaWeb3.PublicKey(TREASURY_WALLET),
@@ -90,28 +76,25 @@
                 transaction.recentBlockhash = blockhash;
                 transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
 
-                // Let Backpack handle the signing and sending entirely
-                // This is the method that gave you the Green Checkmark before
                 const provider = window.backpack || window.solana;
+                
+                // DIT IS DE REGEL DIE HET GROENE VINKJE GAF IN DE VIDEO
                 const { signature } = await provider.signAndSendTransaction(transaction);
                 
-                statusEl.innerText = "SENT! WAIT...";
-                console.log("Tx Signature:", signature);
-
-                // Trigger backend immediately after sending
+                // We wachten NIET op de trage blockchain, we gaan direct door (Fire & Forget)
+                statusEl.innerText = "SPINNING...";
+                
+                // Backend aanroepen voor Koper 10
                 fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ signature, player: walletAddress })
                 });
 
-                // Wait a moment then show success
-                setTimeout(() => {
-                     startSpinAnim(['🐾', '🐾', '🐾'], "CHECK WALLET!");
-                }, 1000);
+                startSpinAnim(['🐾', '🐾', '🐾'], "BITE SUCCESSFUL! 🔥");
 
             } catch (err) {
-                console.error("Transaction Error:", err);
+                console.error(err);
                 statusEl.innerText = "TRY AGAIN";
                 playBtn.disabled = false;
             }
