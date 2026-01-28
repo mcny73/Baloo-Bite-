@@ -2,92 +2,112 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - TESTNET FINAL</title>
+    <title>BALOO BITE - MOON MISSION</title>
     <style>
-        body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .game-card { background: #0a0a0a; border: 4px solid #ffd700; border-radius: 20px; padding: 25px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
         .pot-container { background: #111; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; }
-        .pot-value { font-size: 40px; color: #fff; text-shadow: 0 0 10px #ffd700; }
-        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 22px; border-radius: 15px; text-transform: uppercase; box-shadow: 0 4px 0 #665200; }
+        .pot-value { font-size: 32px; color: #fff; text-shadow: 0 0 10px #ffd700; }
+        .slot-machine { display: flex; justify-content: center; gap: 10px; margin: 20px 0; background: #151515; padding: 15px; border-radius: 15px; }
+        .reel { width: 80px; height: 100px; background: #222; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 40px; border: 2px solid #333; }
+        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 22px; border-radius: 15px; text-transform: uppercase; transition: 0.2s; }
+        .btn-bite:active { transform: scale(0.98); }
         .btn-bite:disabled { opacity: 0.5; filter: grayscale(1); }
-        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; min-height: 20px; text-transform: uppercase; }
+        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; height: 20px; text-transform: uppercase; }
+        .spinning { animation: blur 0.1s infinite linear; }
+        @keyframes blur { 0% { filter: blur(0px); transform: translateY(-2px); } 50% { filter: blur(2px); } 100% { filter: blur(0px); transform: translateY(2px); } }
     </style>
 </head>
 <body>
     <div class="game-card">
         <div class="pot-container">
-            <div style="font-size: 10px; color: #ffd700;">TESTNET TREASURY (XNT)</div>
+            <div style="font-size: 10px; color: #ffd700; letter-spacing: 2px;">LIVE JACKPOT (XNT)</div>
             <div id="potDisplay" class="pot-value">...</div>
         </div>
-        <button class="btn-bite" id="mainBtn" onclick="runBite()">BITE THE BONE</button>
-        <div id="status">READY</div>
+        
+        <div class="slot-machine">
+            <div class="reel" id="r1">🦴</div>
+            <div class="reel" id="r2">🐾</div>
+            <div class="reel" id="r3">🦴</div>
+        </div>
+
+        <button class="btn-bite" id="mainBtn" onclick="runBite()">BITE THE BONE (1 XNT)</button>
+        <div id="status">READY TO PUMP $BALOO</div>
     </div>
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
-        const TREASURY = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        const TESTNET_RPC = "https://rpc.testnet.x1.xyz"; 
-        const connection = new solanaWeb3.Connection(TESTNET_RPC, "confirmed");
+        const TREASURY = "39fuVmCFZDpoirjpMoJUoBmWTj27c3Vk69hFf48QGtPe"; // Koper 1
+        const X1_RPC = "https://rpc.testnet.x1.xyz";
+        const connection = new solanaWeb3.Connection(X1_RPC, "confirmed");
 
         async function updatePot() {
             try {
                 const bal = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY));
                 document.getElementById('potDisplay').innerText = (bal / 1e9).toFixed(2);
-            } catch(e) { document.getElementById('potDisplay').innerText = "318.75"; }
+            } catch(e) {}
         }
         updatePot();
+        setInterval(updatePot, 10000);
 
         async function runBite() {
             const btn = document.getElementById('mainBtn');
             const status = document.getElementById('status');
             const provider = window.backpack || window.x1;
+            if (!provider) return alert("Open Backpack!");
 
-            if (!provider) return alert("Wallet not found!");
-            
             btn.disabled = true;
-            status.innerText = "CONNECTING...";
+            status.innerText = "CONNECTING WALLET...";
 
             try {
-                // Ensure connection
-                const resp = await provider.connect();
-                const pubKey = resp.publicKey || provider.publicKey;
-                
-                status.innerText = "REQUESTING SIGNATURE...";
+                await provider.connect();
+                status.innerText = "SIGNING 1 XNT BITE...";
 
-                // Create Transaction
-                const transaction = new solanaWeb3.Transaction().add(
+                const tx = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
-                        fromPubkey: pubKey,
+                        fromPubkey: provider.publicKey,
                         toPubkey: new solanaWeb3.PublicKey(TREASURY),
                         lamports: 1000000000 // 1 XNT
                     })
                 );
 
-                // Fetch blockhash
-                const { blockhash } = await connection.getLatestBlockhash('confirmed');
-                transaction.recentBlockhash = blockhash;
-                transaction.feePayer = pubKey;
+                const { blockhash } = await connection.getLatestBlockhash();
+                tx.recentBlockhash = blockhash;
+                tx.feePayer = provider.publicKey;
                 
-                // Send and Confirm
-                const { signature } = await provider.signAndSendTransaction(transaction);
-                status.innerText = "SUCCESS! PUMPING BALOO...";
-                
-                // Refresh balance after delay
-                setTimeout(updatePot, 3000);
+                const signature = await provider.signAndSendTransaction(tx);
+                status.innerText = "TX CONFIRMED! ROLLING...";
+
+                // Start Visual Reels
+                const reels = [document.getElementById('r1'), document.getElementById('r2'), document.getElementById('r3')];
+                reels.forEach(r => r.classList.add('spinning'));
+
+                // CALL BACKEND TO CALCULATE WIN (Vercel API)
+                const response = await fetch('/api/play', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        signature: signature,
+                        player: provider.publicKey.toString()
+                    })
+                });
+                const result = await response.json();
+
+                // Wait for dramatic effect
+                setTimeout(() => {
+                    reels.forEach((r, i) => {
+                        r.classList.remove('spinning');
+                        r.innerText = result.symbols[i];
+                    });
+                    status.innerText = result.message;
+                    updatePot();
+                }, 2000);
 
             } catch (err) {
-                console.error("TX Error:", err);
-                if (err.code === -32002) {
-                    status.innerText = "REJECT PENDING IN WALLET";
-                    alert("Your wallet is busy. Please REJECT the current request in Backpack first!");
-                } else {
-                    status.innerText = "TRANSACTION FAILED";
-                }
+                status.innerText = "BITE CANCELED";
+                console.error(err);
             }
-            setTimeout(() => { 
-                btn.disabled = false; 
-                if(status.innerText === "TRANSACTION FAILED") status.innerText = "READY";
-            }, 5000);
+            setTimeout(() => { btn.disabled = false; }, 4000);
         }
     </script>
 </body>
