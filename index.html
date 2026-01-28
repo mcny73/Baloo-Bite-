@@ -117,6 +117,12 @@
         const TREASURY_WALLET = "39fuVmCFZDpoirjpMoJUoBmWTj27c3Vk69hFf48QGtPe";
         const RPC_URL = "https://rpc.testnet.x1.xyz";
 
+        const getProvider = () => {
+          if ('backpack' in window) { return window.backpack; }
+          if ('solana' in window) { return window.solana; }
+          return null;
+        };
+
         async function updateTreasuryBalance() {
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL);
@@ -129,12 +135,10 @@
         }
 
         async function connectWallet() {
-            // Controleer specifiek op Backpack of algemene Solana provider
-            const provider = window.backpack || window.solana;
+            const provider = getProvider();
             
             if (!provider) {
                 alert("PLEASE INSTALL BACKPACK WALLET!");
-                window.open("https://backpack.app/", "_blank");
                 return;
             }
 
@@ -143,14 +147,13 @@
                 walletAddress = response.publicKey.toString();
                 document.getElementById('connectBtn').innerText = "CONNECTED: " + walletAddress.slice(0,4) + "...";
                 document.getElementById('status').innerText = "WALLET LINKED!";
-                console.log("Wallet connected:", walletAddress);
             } catch (err) {
                 console.error(err);
-                alert("CONNECTION FAILED. PLEASE UNLOCK BACKPACK.");
             }
         }
 
         async function playGame() {
+            const provider = getProvider();
             if (!walletAddress) {
                 await connectWallet();
                 if (!walletAddress) return;
@@ -163,7 +166,6 @@
 
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
-                const provider = window.backpack || window.solana;
 
                 const transaction = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
