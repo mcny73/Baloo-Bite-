@@ -41,7 +41,6 @@
 
         async function connectWallet() {
             const statusEl = document.getElementById('status');
-            const connectBtn = document.getElementById('connectBtn');
             try {
                 const provider = window.backpack || window.solana;
                 if (!provider) {
@@ -50,11 +49,9 @@
                 }
                 const resp = await provider.connect();
                 walletAddress = resp.publicKey.toString();
-                connectBtn.innerText = walletAddress.slice(0,6) + "...";
+                document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
                 statusEl.innerText = "CONNECTED";
-                console.log("Connected:", walletAddress);
             } catch (err) {
-                console.error("Connection error:", err);
                 statusEl.innerText = "CONN ERROR";
             }
         }
@@ -65,7 +62,7 @@
 
             if (!walletAddress) {
                 await connectWallet();
-                if (!walletAddress) return;
+                return;
             }
             
             playBtn.disabled = true;
@@ -78,30 +75,37 @@
                 const transaction = new solanaWeb3.Transaction();
                 transaction.recentBlockhash = blockhash;
                 transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
-                transaction.add(solanaWeb3.SystemProgram.transfer({
-                    fromPubkey: new solanaWeb3.PublicKey(walletAddress),
-                    toPubkey: new solanaWeb3.PublicKey(TREASURY_WALLET),
-                    lamports: 1000000000
-                }));
+                
+                transaction.add(
+                    solanaWeb3.SystemProgram.transfer({
+                        fromPubkey: new solanaWeb3.PublicKey(walletAddress),
+                        toPubkey: new solanaWeb3.PublicKey(TREASURY_WALLET),
+                        lamports: 1000000000 // 1 XNT
+                    })
+                );
 
                 const provider = window.backpack || window.solana;
+                // We sturen de TX en wachten NIET op bevestiging in de browser om timeouts te voorkomen
                 const { signature } = await provider.signAndSendTransaction(transaction);
                 
                 statusEl.innerText = "SPINNING...";
                 
-                // Backend call without waiting for finality to prevent timeouts
-                const response = await fetch('/api/play', {
+                // We schieten de signature direct naar de API
+                fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ signature, player: walletAddress })
+                }).then(res => res.json()).then(result => {
+                    startSpinAnim(result.symbols, result.message);
+                }).catch(e => {
+                    console.error(e);
+                    // Zelfs bij API error laten we de animatie draaien met standaard symbols
+                    startSpinAnim(['🐾', '🐾', '🐾'], "BURN SUCCESSFUL! 🔥");
                 });
 
-                const result = await response.json();
-                startSpinAnim(result.symbols, result.message);
-
             } catch (err) {
-                console.error("Game error:", err);
-                statusEl.innerText = "TRY AGAIN";
+                console.error(err);
+                statusEl.innerText = "REJECTED / ERROR";
                 playBtn.disabled = false;
             }
         }
@@ -115,10 +119,10 @@
                 document.getElementById('reel3').innerText = items[Math.floor(Math.random()*4)];
                 if (++spins > 20) {
                     clearInterval(interval);
-                    document.getElementById('reel1').innerText = symbols[0] || '🦴';
-                    document.getElementById('reel2').innerText = symbols[1] || '🦴';
-                    document.getElementById('reel3').innerText = symbols[2] || '🦴';
-                    document.getElementById('status').innerText = msg || "BURN SUCCESSFUL! 🔥";
+                    document.getElementById('reel1').innerText = symbols[0];
+                    document.getElementById('reel2').innerText = symbols[1];
+                    document.getElementById('reel3').innerText = symbols[2];
+                    document.getElementById('status').innerText = msg;
                     document.getElementById('playBtn').disabled = false;
                 }
             }, 100);
