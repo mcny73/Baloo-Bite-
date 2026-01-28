@@ -24,32 +24,49 @@
     <button class="wallet-btn" id="connectBtn" onclick="connectWallet()">CONNECT WALLET</button>
     <div class="container">
         <h1>BALOO BITE</h1>
-        <div class="treasury">LP TREASURY: <span id="balance">119.75</span> XNT</div>
+        <div class="treasury">LP TREASURY: <span id="balance">LOADING...</span> XNT</div>
         <div class="slot-machine">
             <div id="reel1" class="reel">🐾</div>
             <div id="reel2" class="reel">🐾</div>
             <div id="reel3" class="reel">🐾</div>
         </div>
         <button class="btn" id="playBtn" onclick="playGame()">BITE (1 XNT)</button>
-        <div id="status">READY?</div>
+        <div id="status">READY TO BITE?</div>
     </div>
 
     <script>
         let walletAddress = null;
+        
+        // BUYER 1 ADDRESS (Treasury)
         const TREASURY_WALLET = "39fuVmCFZDpoirjpMoJUoBmWTj27c3Vk69hFf48QGtPe";
-        // RPC URL
-        const RPC_URL = "https://rpc.testnet.x1.xyz"; 
+        
+        // MAINNET RPC
+        const RPC_URL = "https://rpc.x1.xyz"; 
 
         async function connectWallet() {
             try {
                 const provider = window.backpack || window.solana;
-                if (!provider) return alert("Install Backpack");
+                if (!provider) return alert("Install Backpack Wallet");
+                
                 const resp = await provider.connect();
                 walletAddress = resp.publicKey.toString();
+                
                 document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
                 document.getElementById('status').innerText = "CONNECTED";
+                updateTreasuryBalance(); 
             } catch (err) {
                 console.error(err);
+                document.getElementById('status').innerText = "CONN FAILED";
+            }
+        }
+
+        async function updateTreasuryBalance() {
+            try {
+                const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
+                const balance = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY_WALLET));
+                document.getElementById('balance').innerText = (balance / 1000000000).toFixed(2);
+            } catch (e) {
+                console.log("Balance load error");
             }
         }
 
@@ -57,10 +74,13 @@
             const playBtn = document.getElementById('playBtn');
             const statusEl = document.getElementById('status');
 
-            if (!walletAddress) return await connectWallet();
+            if (!walletAddress) {
+                await connectWallet();
+                if (!walletAddress) return;
+            }
             
             playBtn.disabled = true;
-            statusEl.innerText = "CHECK BACKPACK...";
+            statusEl.innerText = "CHECK WALLET...";
 
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
@@ -78,23 +98,28 @@
 
                 const provider = window.backpack || window.solana;
                 
-                // DIT IS DE REGEL DIE HET GROENE VINKJE GAF IN DE VIDEO
+                // STANDARD METHOD (Green Checkmark)
                 const { signature } = await provider.signAndSendTransaction(transaction);
                 
-                // We wachten NIET op de trage blockchain, we gaan direct door (Fire & Forget)
                 statusEl.innerText = "SPINNING...";
                 
-                // Backend aanroepen voor Koper 10
-                fetch('/api/play', {
+                // Call Backend
+                const response = await fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ signature, player: walletAddress })
                 });
 
-                startSpinAnim(['🐾', '🐾', '🐾'], "BITE SUCCESSFUL! 🔥");
+                const result = await response.json();
+
+                // Start Animation with result
+                startSpinAnim(result.symbols || ['🐾','🐾','🐾'], result.message || "BITE COMPLETE!");
+
+                // Update Balance after delay
+                setTimeout(updateTreasuryBalance, 3000);
 
             } catch (err) {
-                console.error(err);
+                console.error("Tx Error:", err);
                 statusEl.innerText = "TRY AGAIN";
                 playBtn.disabled = false;
             }
@@ -117,6 +142,10 @@
                 }
             }, 100);
         }
+        
+        window.onload = () => {
+             updateTreasuryBalance();
+        };
     </script>
 </body>
 </html>
