@@ -41,8 +41,9 @@
 
         async function connectWallet() {
             try {
-                const provider = window.backpack || window.solana;
-                if (!provider) return alert("Install Backpack");
+                // Use generic solana object (works better with Backpack injection)
+                const provider = window.solana;
+                if (!provider) return alert("Wallet not found");
                 const resp = await provider.connect();
                 walletAddress = resp.publicKey.toString();
                 document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
@@ -55,27 +56,20 @@
         async function playGame() {
             const playBtn = document.getElementById('playBtn');
             const statusEl = document.getElementById('status');
-            if (!walletAddress) return await connectWallet();
+            
+            if (!walletAddress) {
+                await connectWallet();
+                if (!walletAddress) return;
+            }
             
             playBtn.disabled = true;
-            statusEl.innerText = "PREPARING...";
+            statusEl.innerText = "OPENING WALLET...";
 
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
-                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
+                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
                 
                 const transaction = new solanaWeb3.Transaction();
-
-                // 1. ADD MASSIVE PRIORITY FEE (NUCLEAR OPTION)
-                const priorityFee = solanaWeb3.ComputeBudgetProgram.setComputeUnitPrice({
-                    microLamports: 1000000 // 100x normale fee
-                });
-                const computeLimit = solanaWeb3.ComputeBudgetProgram.setComputeUnitLimit({
-                    units: 200000
-                });
-                transaction.add(priorityFee, computeLimit);
-
-                // 2. ADD TRANSFER
                 transaction.add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: new solanaWeb3.PublicKey(walletAddress),
@@ -87,42 +81,41 @@
                 transaction.recentBlockhash = blockhash;
                 transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
 
-                const provider = window.backpack || window.solana;
-                const signedTx = await provider.signTransaction(transaction);
+                const provider = window.solana;
                 
-                // 3. SEND RAW WITH SKIP PREFLIGHT
-                const signature = await connection.sendRawTransaction(signedTx.serialize(), {
-                    skipPreflight: true,
-                    maxRetries: 10
-                });
+                // STANDARD SEND - NO HACKS
+                // This will throw an error in the wallet if the tx is invalid
+                const { signature } = await provider.signAndSendTransaction(transaction);
                 
-                statusEl.innerText = "SENT! CONFIRMING...";
-                console.log("Tx Hash:", signature);
+                statusEl.innerText = "CONFIRMING...";
+                console.log("Signature:", signature);
 
-                // 4. WAIT FOR CONFIRMATION
+                // Wait for REAL on-chain confirmation
                 const confirmation = await connection.confirmTransaction({
                     signature,
                     blockhash,
                     lastValidBlockHeight
                 }, "confirmed");
 
-                if (confirmation.value.err) throw new Error("FAILED ON CHAIN");
+                if (confirmation.value.err) {
+                    throw new Error("Transaction Failed On-Chain");
+                }
 
-                // 5. SUCCESS!
-                statusEl.innerText = "TX: " + signature.slice(0,8) + "...";
+                statusEl.innerText = "SUCCESS! SPINNING...";
                 
-                // Trigger backend
+                // Only trigger backend if money actually moved
                 fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ signature, player: walletAddress })
                 });
 
-                startSpinAnim(['🐾', '🐾', '🐾'], "BURN COMPLETE! 🔥");
+                startSpinAnim(['🐾', '🐾', '🐾'], "BITE SUCCESSFUL! 🔥");
 
             } catch (err) {
-                console.error(err);
-                statusEl.innerText = "CHAIN REJECTED. RETRY?";
+                console.error("Tx Error:", err);
+                // Toon de echte error op het scherm
+                statusEl.innerText = "TX FAILED: CHECK WALLET"; 
                 playBtn.disabled = false;
             }
         }
