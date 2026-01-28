@@ -40,7 +40,6 @@
         const RPC_URL = "https://rpc.testnet.x1.xyz";
 
         async function connectWallet() {
-            console.log("Connect clicked");
             const statusEl = document.getElementById('status');
             try {
                 const provider = window.backpack || (window.solana && window.solana.isBackpack ? window.solana : null);
@@ -72,7 +71,13 @@
 
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
-                const transaction = new solanaWeb3.Transaction().add(
+                const { blockhash } = await connection.getLatestBlockhash();
+                
+                const transaction = new solanaWeb3.Transaction();
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
+                
+                transaction.add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: new solanaWeb3.PublicKey(walletAddress),
                         toPubkey: new solanaWeb3.PublicKey(TREASURY_WALLET),
@@ -81,45 +86,3 @@
                 );
 
                 const provider = window.backpack || window.solana;
-                const { signature } = await provider.signAndSendTransaction(transaction);
-                statusEl.innerText = "CONFIRMING...";
-                
-                await connection.confirmTransaction(signature, "confirmed");
-                statusEl.innerText = "SPINNING...";
-                
-                const response = await fetch('/api/play', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ signature, player: walletAddress })
-                });
-
-                const result = await response.json();
-                startSpinAnim(result.symbols, result.message);
-
-            } catch (err) {
-                console.error("Game error:", err);
-                statusEl.innerText = "ERROR - TRY AGAIN";
-                playBtn.disabled = false;
-            }
-        }
-
-        function startSpinAnim(symbols, msg) {
-            let spins = 0;
-            const items = ['🐾', '🦴', '🥈', '🥇'];
-            const interval = setInterval(() => {
-                document.getElementById('reel1').innerText = items[Math.floor(Math.random()*4)];
-                document.getElementById('reel2').innerText = items[Math.floor(Math.random()*4)];
-                document.getElementById('reel3').innerText = items[Math.floor(Math.random()*4)];
-                if (++spins > 20) {
-                    clearInterval(interval);
-                    document.getElementById('reel1').innerText = symbols[0];
-                    document.getElementById('reel2').innerText = symbols[1];
-                    document.getElementById('reel3').innerText = symbols[2];
-                    document.getElementById('status').innerText = msg;
-                    document.getElementById('playBtn').disabled = false;
-                }
-            }, 100);
-        }
-    </script>
-</body>
-</html>
