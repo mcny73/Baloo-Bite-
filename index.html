@@ -16,7 +16,7 @@
         .btn { background: #f39c12; color: white; border: none; padding: 18px 0; width: 100%; font-size: 1.8rem; font-family: 'Permanent Marker', cursive; cursor: pointer; border-radius: 50px; transition: 0.3s; box-shadow: 0 5px 0 #d35400; }
         .btn:hover { background: #e67e22; transform: translateY(-2px); }
         .btn:disabled { background: #7f8c8d; box-shadow: none; cursor: not-allowed; transform: none; }
-        #status { margin-top: 25px; font-size: 1.4rem; color: #f1c40f; min-height: 1.6rem; }
+        #status { margin-top: 25px; font-size: 1.4rem; color: #f1c40f; min-height: 1.6rem; word-break: break-all; font-size: 1rem; }
         .wallet-btn { position: absolute; top: 20px; right: 20px; background: transparent; border: 2px solid #f39c12; color: #f39c12; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-family: 'Permanent Marker', cursive; z-index: 999; }
     </style>
 </head>
@@ -41,13 +41,14 @@
 
         async function connectWallet() {
             try {
-                const provider = window.backpack;
+                const provider = window.backpack || window.solana;
+                if (!provider) return alert("Install Backpack");
                 const resp = await provider.connect();
                 walletAddress = resp.publicKey.toString();
                 document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
                 document.getElementById('status').innerText = "CONNECTED";
             } catch (err) {
-                document.getElementById('status').innerText = "ERROR";
+                document.getElementById('status').innerText = "CONN ERROR";
             }
         }
 
@@ -57,20 +58,22 @@
             if (!walletAddress) return await connectWallet();
             
             playBtn.disabled = true;
-            statusEl.innerText = "PREPARING BITE...";
+            statusEl.innerText = "PREPARING...";
 
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
                 const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
                 
                 const transaction = new solanaWeb3.Transaction();
-                
-                // 1. ADD PRIORITY FEE (De oplossing voor het weigeren)
-                // Dit dwingt het netwerk om de tx serieus te nemen
-                const priorityFeeInstruction = solanaWeb3.ComputeBudgetProgram.setComputeUnitPrice({
-                    microLamports: 10000 
+
+                // 1. ADD MASSIVE PRIORITY FEE (NUCLEAR OPTION)
+                const priorityFee = solanaWeb3.ComputeBudgetProgram.setComputeUnitPrice({
+                    microLamports: 1000000 // 100x normale fee
                 });
-                transaction.add(priorityFeeInstruction);
+                const computeLimit = solanaWeb3.ComputeBudgetProgram.setComputeUnitLimit({
+                    units: 200000
+                });
+                transaction.add(priorityFee, computeLimit);
 
                 // 2. ADD TRANSFER
                 transaction.add(
@@ -84,44 +87,42 @@
                 transaction.recentBlockhash = blockhash;
                 transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
 
-                const provider = window.backpack;
-                
-                // 3. SEND RAW (Bypass Backpack checks)
+                const provider = window.backpack || window.solana;
                 const signedTx = await provider.signTransaction(transaction);
+                
+                // 3. SEND RAW WITH SKIP PREFLIGHT
                 const signature = await connection.sendRawTransaction(signedTx.serialize(), {
                     skipPreflight: true,
-                    maxRetries: 5
+                    maxRetries: 10
                 });
                 
-                statusEl.innerText = "CONFIRMING ON CHAIN...";
-                
-                // 4. WACHT OP ECHTE BEVESTIGING
-                // Als dit faalt, start de animatie NIET en weten we dat het geld niet weg is
+                statusEl.innerText = "SENT! CONFIRMING...";
+                console.log("Tx Hash:", signature);
+
+                // 4. WAIT FOR CONFIRMATION
                 const confirmation = await connection.confirmTransaction({
                     signature,
                     blockhash,
                     lastValidBlockHeight
                 }, "confirmed");
 
-                if (confirmation.value.err) {
-                    throw new Error("Transaction failed on chain");
-                }
+                if (confirmation.value.err) throw new Error("FAILED ON CHAIN");
 
-                // Pas als we hier zijn, is het geld ECHT weg.
-                statusEl.innerText = "SPINNING...";
+                // 5. SUCCESS!
+                statusEl.innerText = "TX: " + signature.slice(0,8) + "...";
                 
-                // Trigger backend voor Koper 10
+                // Trigger backend
                 fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ signature, player: walletAddress })
                 });
 
-                startSpinAnim(['🐾', '🐾', '🐾'], "BITE SUCCESSFUL! 🔥");
+                startSpinAnim(['🐾', '🐾', '🐾'], "BURN COMPLETE! 🔥");
 
             } catch (err) {
                 console.error(err);
-                statusEl.innerText = "CHAIN REJECTED TX"; // Duidelijke foutmelding
+                statusEl.innerText = "CHAIN REJECTED. RETRY?";
                 playBtn.disabled = false;
             }
         }
