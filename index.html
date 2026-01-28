@@ -42,13 +42,12 @@
         async function connectWallet() {
             try {
                 const provider = window.backpack;
-                if (!provider) return alert("OPEN BACKPACK FIRST");
                 const resp = await provider.connect();
                 walletAddress = resp.publicKey.toString();
                 document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
                 document.getElementById('status').innerText = "CONNECTED";
             } catch (err) {
-                document.getElementById('status').innerText = "CONN ERROR";
+                document.getElementById('status').innerText = "CONNECTION ERROR";
             }
         }
 
@@ -62,7 +61,7 @@
 
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
-                const { blockhash } = await connection.getLatestBlockhash('confirmed');
+                const { blockhash } = await connection.getLatestBlockhash();
                 
                 const transaction = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
@@ -74,23 +73,24 @@
                 transaction.recentBlockhash = blockhash;
                 transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
 
+                // DEZE STAP IS HET BELANGRIJKST: We forceren de verzending
                 const { signature } = await window.backpack.signAndSendTransaction(transaction);
                 
                 statusEl.innerText = "SPINNING...";
                 
-                // Fire background API
+                // Roep de API aan voor de fee-verdeling op de achtergrond
                 fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ signature, player: walletAddress })
                 });
 
-                // Start animation regardless of backend speed to avoid "Error"
+                // Start animatie gebaseerd op je succesvolle video
                 startSpinAnim(['🐾', '🐾', '🐾'], "BITE SUCCESSFUL! 🔥");
 
             } catch (err) {
                 console.error(err);
-                statusEl.innerText = "REJECTED - RETRY";
+                statusEl.innerText = "TRY AGAIN";
                 playBtn.disabled = false;
             }
         }
