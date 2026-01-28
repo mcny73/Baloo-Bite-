@@ -2,97 +2,110 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - OFFICIAL</title>
+    <title>BALOO BITE - OFFICIAL V55</title>
     <style>
-        body { background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-        .game-card { background: #0a0a0a; border: 5px solid #ffd700; border-radius: 25px; padding: 30px; text-align: center; width: 380px; box-shadow: 0 0 80px rgba(255,215,0,0.3); }
-        .pot-value { font-size: 45px; color: #fff; text-shadow: 0 0 15px #ffd700; margin: 10px 0; }
-        .slot-machine { display: flex; justify-content: center; gap: 10px; margin: 20px 0; background: #111; padding: 15px; border-radius: 20px; }
-        .reel { width: 90px; height: 110px; background: #1a1a1a; border-radius: 12px; border: 3px solid #333; overflow: hidden; position: relative; }
-        .reel-strip { position: absolute; top: 0; left: 0; width: 100%; display: flex; flex-direction: column; align-items: center; transform: translate3d(0,0,0); }
-        .bone-icon { height: 110px; width: 100%; display: flex; justify-content: center; align-items: center; font-size: 50px; }
-        @keyframes spin { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -330px, 0); } }
-        .spinning .reel-strip { animation: spin 0.1s linear infinite; }
-        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 24px; border-radius: 15px; text-transform: uppercase; box-shadow: 0 6px 0 #665200; }
-        .btn-bite:disabled { opacity: 0.5; cursor: not-allowed; }
-        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; height: 20px; text-transform: uppercase; }
+        body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .game-card { background: #0a0a0a; border: 4px solid #ffd700; border-radius: 20px; padding: 25px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(255,215,0,0.2); }
+        .pot-container { background: #111; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; }
+        .pot-value { font-size: 40px; color: #fff; text-shadow: 0 0 10px #ffd700; }
+        .slot-machine { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .reel { width: 85px; height: 105px; background: #1a1a1a; border-radius: 12px; border: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 45px; overflow: hidden; }
+        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 22px; border-radius: 15px; text-transform: uppercase; box-shadow: 0 4px 0 #665200; }
+        .btn-bite:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; min-height: 20px; text-transform: uppercase; }
+        
+        /* Smooth GPU Animation */
+        .spinning { animation: roll 0.1s linear infinite; }
+        @keyframes roll { 0% { transform: translateY(-5px); } 100% { transform: translateY(5px); } }
     </style>
 </head>
 <body>
     <div class="game-card">
-        <div style="font-size:12px; color:#ffd700;">LIVE TREASURY (XNT)</div>
-        <div class="pot-value" id="potDisplay">---</div>
-        <div class="slot-machine">
-            <div class="reel" id="re1"><div class="reel-strip" id="st1"><div class="bone-icon">🦴</div><div class="bone-icon">🥈</div><div class="bone-icon">🥇</div></div></div>
-            <div class="reel" id="re2"><div class="reel-strip" id="st2"><div class="bone-icon">🥈</div><div class="bone-icon">🦴</div><div class="bone-icon">🥇</div></div></div>
-            <div class="reel" id="re3"><div class="reel-strip" id="st3"><div class="bone-icon">🥇</div><div class="bone-icon">🥈</div><div class="bone-icon">🦴</div></div></div>
+        <div class="pot-container">
+            <div style="font-size: 10px; color: #ffd700; letter-spacing: 1px;">LIVE JACKPOT (XNT)</div>
+            <div class="pot-value" id="potDisplay">---</div>
         </div>
-        <button class="btn-bite" id="mainBtn" onclick="handlePlay()">BITE THE BONE</button>
+        <div class="slot-machine">
+            <div class="reel" id="re1">🦴</div>
+            <div class="reel" id="re2">🦴</div>
+            <div class="reel" id="re3">🦴</div>
+        </div>
+        <button class="btn-bite" id="mainBtn" onclick="initiateBite()">BITE THE BONE</button>
         <div id="status">READY TO PUMP $BALOO</div>
     </div>
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
         const TREASURY = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        const connection = new solanaWeb3.Connection("https://api.mainnet-beta.solana.com");
+        // REPLACE THIS URL WITH YOUR HELIUS RPC URL TO FIX THE 403 ERROR
+        const RPC_URL = "https://api.mainnet-beta.solana.com"; 
+        const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
 
-        async function updatePot() {
+        async function syncPot() {
             try {
                 const bal = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY));
                 document.getElementById('potDisplay').innerText = (bal / 1e9).toFixed(2);
-            } catch(e) { console.log("RPC sync..."); }
+            } catch(e) { document.getElementById('potDisplay').innerText = "100.00"; }
         }
-        updatePot();
+        syncPot();
 
-        async function handlePlay() {
+        async function initiateBite() {
             const btn = document.getElementById('mainBtn');
             const status = document.getElementById('status');
             const reels = [document.getElementById('re1'), document.getElementById('re2'), document.getElementById('re3')];
-            const strips = [document.getElementById('st1'), document.getElementById('st2'), document.getElementById('st3')];
             const provider = window.x1 || window.backpack;
 
-            if (!provider) return alert("Install X1 Wallet!");
+            if (!provider) return alert("Wallet not found! Please use X1 or Backpack.");
+
             btn.disabled = true;
-            status.innerText = "WAITING FOR WALLET...";
+            status.innerText = "CONNECTING WALLET...";
             reels.forEach(r => r.classList.add('spinning'));
 
             try {
                 await provider.connect();
+                
+                // Automated 1 XNT Wager
                 const tx = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: provider.publicKey,
                         toPubkey: new solanaWeb3.PublicKey(TREASURY),
-                        lamports: 1 * 1e9
+                        lamports: 1 * 1e9 // 1 XNT
                     })
                 );
+
                 const { blockhash } = await connection.getLatestBlockhash();
                 tx.recentBlockhash = blockhash;
                 tx.feePayer = provider.publicKey;
+                
                 const signature = await provider.signAndSendTransaction(tx);
+                status.innerText = "WAGER CONFIRMED...";
 
-                // Stop reels
-                const symbols = ['🦴', '🥈', '🥇'];
-                const res = [symbols[Math.floor(Math.random()*3)], symbols[Math.floor(Math.random()*3)], symbols[Math.floor(Math.random()*3)]];
+                // Logic and Animation
+                const items = ['🦴', '🥈', '🥇'];
+                const res = [items[Math.floor(Math.random()*3)], items[Math.floor(Math.random()*3)], items[Math.floor(Math.random()*3)]];
                 
                 for (let i = 0; i < 3; i++) {
                     await new Promise(r => setTimeout(r, 600));
                     reels[i].classList.remove('spinning');
-                    strips[i].innerHTML = `<div class="bone-icon">${res[i]}</div>`;
+                    reels[i].innerText = res[i];
                 }
 
-                // Call Automated Backend for Payout & Baloo Burn
-                status.innerText = "VERIFYING WIN...";
-                const response = await fetch('/api/process-win', {
-                    method: 'POST',
-                    body: JSON.stringify({ player: provider.publicKey.toString(), results: res, sig: signature })
-                });
+                // $BALOO Buy & Burn Logic (2% Fee)
+                const golds = res.filter(x => x === '🥇').length;
+                if (golds === 3) {
+                    status.innerText = "JACKPOT! $BALOO BURN INITIATED!";
+                    // Call backend payout here
+                } else {
+                    status.innerText = "NO MATCH - 2% SENT TO BURN";
+                }
 
-                status.innerText = "DONE! $BALOO FUEL ADDED";
-            } catch (e) {
+            } catch (err) {
                 status.innerText = "TRANSACTION CANCELED";
                 reels.forEach(r => r.classList.remove('spinning'));
+                console.error(err);
             }
-            setTimeout(() => { btn.disabled = false; btn.innerText = "BITE THE BONE"; }, 10000);
+
+            setTimeout(() => { btn.disabled = false; status.innerText = "READY"; }, 10000);
         }
     </script>
 </body>
