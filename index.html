@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - LIVE TESTNET</title>
+    <title>BALOO BITE - STABLE ENGINE</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .game-card { background: #0a0a0a; border: 4px solid #ffd700; border-radius: 20px; padding: 25px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
@@ -26,7 +26,7 @@
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
         const TREASURY = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        const X1_RPC = "https://rpc.testnet.x1.xyz"; 
+        const X1_RPC = "https://rpc.testnet.x1.xyz"; // Change to mainnet when ready
         const connection = new solanaWeb3.Connection(X1_RPC, "confirmed");
 
         async function updatePot() {
@@ -44,17 +44,18 @@
 
             if (!provider) return alert("Wallet not found!");
             btn.disabled = true;
-            status.innerText = "STARTING...";
+            status.innerText = "CONNECTING...";
 
             try {
                 await provider.connect();
-                status.innerText = "SENDING 1 XNT...";
+                status.innerText = "SIGNING TRANSACTION...";
 
+                // This is the core logic that worked before
                 const tx = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: provider.publicKey,
                         toPubkey: new solanaWeb3.PublicKey(TREASURY),
-                        lamports: 1000000000 
+                        lamports: 1000000000 // 1 XNT
                     })
                 );
 
@@ -63,14 +64,19 @@
                 tx.feePayer = provider.publicKey;
                 
                 const signature = await provider.signAndSendTransaction(tx);
-                status.innerText = "SUCCESS! SIG: " + signature.slice(0,8);
+                status.innerText = "SUCCESS! 2% FEE SENT TO BALOO";
                 updatePot();
 
             } catch (err) {
                 console.error(err);
-                status.innerText = (err.code === -32002) ? "CLEAR WALLET PENDING" : "ERROR - RETRY";
+                if (err.code === -32002) {
+                    status.innerText = "PENDING REQUEST IN WALLET";
+                    alert("Please open Backpack and REJECT any pending requests first!");
+                } else {
+                    status.innerText = "ERROR - PLEASE RETRY";
+                }
             }
-            setTimeout(() => { btn.disabled = false; status.innerText = "READY"; }, 5000);
+            setTimeout(() => { btn.disabled = false; status.innerText = "READY"; }, 4000);
         }
     </script>
 </body>
