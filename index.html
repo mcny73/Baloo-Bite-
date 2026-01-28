@@ -40,22 +40,33 @@
         const RPC_URL = "https://rpc.testnet.x1.xyz";
 
         async function connectWallet() {
+            const statusEl = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
             try {
-                const provider = window.backpack || (window.solana && window.solana.isBackpack ? window.solana : null);
-                if (!provider) return alert("INSTALL BACKPACK");
+                const provider = window.backpack || window.solana;
+                if (!provider) {
+                    statusEl.innerText = "INSTALL BACKPACK";
+                    return;
+                }
                 const resp = await provider.connect();
                 walletAddress = resp.publicKey.toString();
-                document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
-                document.getElementById('status').innerText = "CONNECTED";
+                connectBtn.innerText = walletAddress.slice(0,6) + "...";
+                statusEl.innerText = "CONNECTED";
+                console.log("Connected:", walletAddress);
             } catch (err) {
-                console.error(err);
+                console.error("Connection error:", err);
+                statusEl.innerText = "CONN ERROR";
             }
         }
 
         async function playGame() {
             const playBtn = document.getElementById('playBtn');
             const statusEl = document.getElementById('status');
-            if (!walletAddress) return await connectWallet();
+
+            if (!walletAddress) {
+                await connectWallet();
+                if (!walletAddress) return;
+            }
             
             playBtn.disabled = true;
             statusEl.innerText = "SIGNING...";
@@ -78,7 +89,7 @@
                 
                 statusEl.innerText = "SPINNING...";
                 
-                // We roepen direct de backend aan zonder op de blockchain te wachten
+                // Backend call without waiting for finality to prevent timeouts
                 const response = await fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -89,8 +100,8 @@
                 startSpinAnim(result.symbols, result.message);
 
             } catch (err) {
-                console.error(err);
-                statusEl.innerText = "ERROR - TRY AGAIN";
+                console.error("Game error:", err);
+                statusEl.innerText = "TRY AGAIN";
                 playBtn.disabled = false;
             }
         }
@@ -104,10 +115,10 @@
                 document.getElementById('reel3').innerText = items[Math.floor(Math.random()*4)];
                 if (++spins > 20) {
                     clearInterval(interval);
-                    document.getElementById('reel1').innerText = symbols[0];
-                    document.getElementById('reel2').innerText = symbols[1];
-                    document.getElementById('reel3').innerText = symbols[2];
-                    document.getElementById('status').innerText = msg;
+                    document.getElementById('reel1').innerText = symbols[0] || '🦴';
+                    document.getElementById('reel2').innerText = symbols[1] || '🦴';
+                    document.getElementById('reel3').innerText = symbols[2] || '🦴';
+                    document.getElementById('status').innerText = msg || "BURN SUCCESSFUL! 🔥";
                     document.getElementById('playBtn').disabled = false;
                 }
             }, 100);
