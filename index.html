@@ -8,34 +8,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
     <style>
         body { background: #1a1a1a; color: white; font-family: 'Permanent Marker', cursive; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .container { text-align: center; background: #2a2a2a; padding: 40px; border-radius: 20px; border: 4px solid #f39c12; box-shadow: 0 0 20px rgba(243, 156, 18, 0.5); position: relative; width: 400px; }
-        h1 { color: #f39c12; font-size: 3.5rem; margin: 0; letter-spacing: 2px; }
-        .treasury { font-size: 1.1rem; color: #2ecc71; margin-bottom: 20px; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        .container { text-align: center; background: #2a2a2a; padding: 40px; border-radius: 20px; border: 4px solid #f39c12; box-shadow: 0 0 20px rgba(243, 156, 18, 0.5); width: 400px; }
+        h1 { color: #f39c12; font-size: 3.5rem; margin: 0; }
+        .treasury { font-size: 1.1rem; color: #2ecc71; margin-bottom: 20px; }
         .slot-machine { display: flex; gap: 15px; justify-content: center; margin: 25px 0; }
-        .reel { width: 90px; height: 110px; background: #f9f9f9; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 3.8rem; color: #333; border: 5px solid #7f8c8d; box-shadow: inset 0 0 10px rgba(0,0,0,0.2); }
+        .reel { width: 90px; height: 110px; background: #f9f9f9; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 3.8rem; color: #333; border: 5px solid #7f8c8d; }
         .btn { background: #f39c12; color: white; border: none; padding: 18px 0; width: 100%; font-size: 1.8rem; font-family: 'Permanent Marker', cursive; cursor: pointer; border-radius: 50px; transition: 0.3s; box-shadow: 0 5px 0 #d35400; }
         .btn:hover { background: #e67e22; transform: translateY(-2px); }
-        .btn:active { transform: translateY(3px); box-shadow: none; }
         .btn:disabled { background: #7f8c8d; box-shadow: none; cursor: not-allowed; }
-        #status { margin-top: 25px; font-size: 1.4rem; color: #f1c40f; min-height: 1.6rem; text-shadow: 1px 1px 2px black; }
-        #burn-alert { color: #ff4757; font-size: 0.9rem; margin-top: 15px; font-style: italic; opacity: 0; transition: 0.5s; background: rgba(255, 71, 87, 0.1); padding: 5px; border-radius: 5px; }
-        .wallet-btn { position: absolute; top: 20px; right: 20px; background: transparent; border: 2px solid #f39c12; color: #f39c12; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-family: 'Permanent Marker', cursive; transition: 0.3s; }
-        .wallet-btn:hover { background: #f39c12; color: white; }
+        #status { margin-top: 25px; font-size: 1.4rem; color: #f1c40f; min-height: 1.6rem; }
+        .wallet-btn { position: absolute; top: 20px; right: 20px; background: transparent; border: 2px solid #f39c12; color: #f39c12; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-family: 'Permanent Marker', cursive; }
     </style>
 </head>
 <body>
     <button class="wallet-btn" id="connectBtn" onclick="connectWallet()">CONNECT WALLET</button>
     <div class="container">
         <h1>BALOO BITE</h1>
-        <div class="treasury">LP TREASURY: <span id="balance">0.00</span> XNT</div>
+        <div class="treasury">LP TREASURY: <span id="balance">119.75</span> XNT</div>
         <div class="slot-machine">
-            <div id="reel1" class="reel">🦴</div>
-            <div id="reel2" class="reel">🦴</div>
-            <div id="reel3" class="reel">🦴</div>
+            <div id="reel1" class="reel">🐾</div>
+            <div id="reel2" class="reel">🐾</div>
+            <div id="reel3" class="reel">🐾</div>
         </div>
         <button class="btn" id="playBtn" onclick="playGame()">BITE (1 XNT)</button>
         <div id="status">READY TO BARK?</div>
-        <div id="burn-alert">🔥 $BALOO BURNED VIA KOPER 10</div>
     </div>
 
     <script>
@@ -43,39 +39,21 @@
         const TREASURY_WALLET = "39fuVmCFZDpoirjpMoJUoBmWTj27c3Vk69hFf48QGtPe";
         const RPC_URL = "https://rpc.testnet.x1.xyz";
 
-        const getProvider = () => window.backpack || window.solana || null;
-
-        async function updateTreasuryBalance() {
-            try {
-                const connection = new solanaWeb3.Connection(RPC_URL);
-                const balance = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY_WALLET));
-                document.getElementById('balance').innerText = (balance / 1000000000).toFixed(2);
-            } catch (err) { console.log("Updating balance..."); }
-        }
-
         async function connectWallet() {
-            const provider = getProvider();
-            if (!provider) return alert("BACKPACK NOT FOUND!");
-            try {
-                const resp = await provider.connect();
-                walletAddress = resp.publicKey.toString();
-                document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
-                document.getElementById('status').innerText = "LINKED & LOADED!";
-            } catch (err) { console.error(err); }
+            const provider = window.backpack || window.solana;
+            if (!provider) return alert("INSTALL BACKPACK!");
+            const resp = await provider.connect();
+            walletAddress = resp.publicKey.toString();
+            document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
+            document.getElementById('status').innerText = "LINKED + LOADED!";
         }
 
         async function playGame() {
             if (!walletAddress) return await connectWallet();
             const statusEl = document.getElementById('status');
-            const burnEl = document.getElementById('burn-alert');
-            const playBtn = document.getElementById('playBtn');
-            
             statusEl.innerText = "SIGNING BITE...";
-            playBtn.disabled = true;
-            burnEl.style.opacity = "0";
-
+            
             try {
-                const provider = getProvider();
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
                 const transaction = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
@@ -85,12 +63,13 @@
                     })
                 );
 
-                const { signature } = await provider.signAndSendTransaction(transaction);
+                const { signature } = await window.backpack.signAndSendTransaction(transaction);
                 statusEl.innerText = "CONFIRMING...";
                 await connection.confirmTransaction(signature);
                 
                 statusEl.innerText = "SPINNING...";
                 
+                // BELANGRIJK: We roepen de API aan
                 const response = await fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -99,38 +78,31 @@
 
                 const result = await response.json();
                 if (response.ok) {
-                    startSpinAnim(result.symbols, result.message, result.burnDetail);
-                } else { throw new Error(result.error); }
-
+                    startSpinAnim(result.symbols, result.message);
+                } else {
+                    statusEl.innerText = "ERROR - TRY AGAIN";
+                }
             } catch (err) {
-                console.error(err);
                 statusEl.innerText = "ERROR - TRY AGAIN";
-                playBtn.disabled = false;
             }
         }
 
-        function startSpinAnim(finalSymbols, finalMessage, burnDetail) {
-            const items = ['🐾', '🦴', '🥈', '🥇'];
+        function startSpinAnim(symbols, msg) {
             let spins = 0;
+            const items = ['🐾', '🦴', '🥈', '🥇'];
             const interval = setInterval(() => {
                 document.getElementById('reel1').innerText = items[Math.floor(Math.random()*4)];
                 document.getElementById('reel2').innerText = items[Math.floor(Math.random()*4)];
                 document.getElementById('reel3').innerText = items[Math.floor(Math.random()*4)];
                 if (++spins > 20) {
                     clearInterval(interval);
-                    document.getElementById('reel1').innerText = finalSymbols[0];
-                    document.getElementById('reel2').innerText = finalSymbols[1];
-                    document.getElementById('reel3').innerText = finalSymbols[2];
-                    document.getElementById('status').innerText = finalMessage;
-                    document.getElementById('burn-alert').innerText = burnDetail;
-                    document.getElementById('burn-alert').style.opacity = "1";
-                    document.getElementById('playBtn').disabled = false;
-                    updateTreasuryBalance();
+                    document.getElementById('reel1').innerText = symbols[0];
+                    document.getElementById('reel2').innerText = symbols[1];
+                    document.getElementById('reel3').innerText = symbols[2];
+                    document.getElementById('status').innerText = msg;
                 }
             }, 100);
         }
-
-        window.onload = updateTreasuryBalance;
     </script>
 </body>
 </html>
