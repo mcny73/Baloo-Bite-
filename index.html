@@ -1,94 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>BALOO BITE - X1 TESTNET V59</title>
-    <style>
-        body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .game-card { background: #0a0a0a; border: 4px solid #ffd700; border-radius: 20px; padding: 25px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
-        .pot-container { background: #111; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; }
-        .pot-value { font-size: 40px; color: #fff; text-shadow: 0 0 10px #ffd700; }
-        .slot-machine { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
-        .reel { width: 85px; height: 105px; background: #1a1a1a; border-radius: 12px; border: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 45px; overflow: hidden; }
-        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 22px; border-radius: 15px; text-transform: uppercase; box-shadow: 0 4px 0 #665200; }
-        .btn-bite:disabled { opacity: 0.5; cursor: not-allowed; }
-        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; min-height: 20px; text-transform: uppercase; }
-        .spinning { animation: roll 0.1s linear infinite; }
-        @keyframes roll { 0% { transform: translateY(-5px); } 100% { transform: translateY(5px); } }
-    </style>
-</head>
-<body>
-    <div class="game-card">
-        <div class="pot-container">
-            <div style="font-size: 10px; color: #ffd700;">TESTNET TREASURY</div>
-            <div class="pot-value" id="potDisplay">100.00</div>
-        </div>
-        <div class="slot-machine"><div class="reel" id="re1">🦴</div><div class="reel" id="re2">🦴</div><div class="reel" id="re3">🦴</div></div>
-        <button class="btn-bite" id="mainBtn" onclick="runBite()">BITE THE BONE</button>
-        <div id="status">READY TO PUMP $BALOO</div>
-    </div>
+const TREASURY = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
+const X1_TESTNET_RPC = "https://rpc.testnet.x1.xyz"; 
+const connection = new solanaWeb3.Connection(X1_TESTNET_RPC, "confirmed");
 
-    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
-    <script>
-        const TREASURY = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        const TESTNET_RPC = "https://rpc.testnet.x1.xyz"; 
+// REAL-TIME BALANCE FETCH
+async function updatePot() {
+    try {
+        const balance = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY));
+        // Divide by 1,000,000,000 to convert lamports to XNT
+        document.getElementById('potDisplay').innerText = (balance / 1000000000).toFixed(2);
+    } catch(e) { 
+        console.error("Fetch failed:", e);
+        document.getElementById('potDisplay').innerText = "SYNCING..."; 
+    }
+}
 
-        async function runBite() {
-            const btn = document.getElementById('mainBtn');
-            const status = document.getElementById('status');
-            const reels = [document.getElementById('re1'), document.getElementById('re2'), document.getElementById('re3')];
-            const provider = window.x1 || window.backpack;
-
-            if (!provider) return alert("X1 Wallet not found!");
-
-            btn.disabled = true;
-            status.innerText = "CHECKING WALLET...";
-            reels.forEach(r => r.classList.add('spinning'));
-
-            try {
-                const connection = new solanaWeb3.Connection(TESTNET_RPC, "confirmed");
-                
-                // Trigger connection - this is where 32002 usually happens
-                await provider.connect();
-                
-                status.innerText = "WAITING FOR APPROVAL...";
-                const tx = new solanaWeb3.Transaction().add(
-                    solanaWeb3.SystemProgram.transfer({
-                        fromPubkey: provider.publicKey,
-                        toPubkey: new solanaWeb3.PublicKey(TREASURY),
-                        lamports: 1000000000 // 1 Test-XNT
-                    })
-                );
-
-                const { blockhash } = await connection.getLatestBlockhash();
-                tx.recentBlockhash = blockhash;
-                tx.feePayer = provider.publicKey;
-                
-                await provider.signAndSendTransaction(tx);
-                status.innerText = "SUCCESS! ROLLING...";
-
-                const symbols = ['🦴', '🥈', '🥇'];
-                const res = [symbols[Math.floor(Math.random()*3)], symbols[Math.floor(Math.random()*3)], symbols[Math.floor(Math.random()*3)]];
-                
-                for (let i = 0; i < 3; i++) {
-                    await new Promise(r => setTimeout(r, 600));
-                    reels[i].classList.remove('spinning');
-                    reels[i].innerText = res[i];
-                }
-                status.innerText = "2% FEE MARKED FOR BURN";
-
-            } catch (err) {
-                // Handle the 32002 error specifically
-                if (err.code === -32002) {
-                    status.innerText = "PENDING REQUEST IN WALLET";
-                    alert("Please open your X1 wallet and clear any pending requests!");
-                } else {
-                    status.innerText = "TRANSACTION CANCELED";
-                }
-                reels.forEach(r => r.classList.remove('spinning'));
-            }
-            setTimeout(() => { btn.disabled = false; status.innerText = "READY"; }, 3000);
-        }
-    </script>
-</body>
-</html>
+// Update every 10 seconds
+setInterval(updatePot, 10000); 
+updatePot();
