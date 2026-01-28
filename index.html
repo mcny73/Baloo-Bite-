@@ -7,107 +7,29 @@
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
     <style>
-        body {
-            background: #1a1a1a;
-            color: white;
-            font-family: 'Permanent Marker', cursive;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden;
-        }
-
-        .container {
-            text-align: center;
-            background: #2a2a2a;
-            padding: 40px;
-            border-radius: 20px;
-            border: 4px solid #f39c12;
-            box-shadow: 0 0 20px rgba(243, 156, 18, 0.5);
-        }
-
+        body { background: #1a1a1a; color: white; font-family: 'Permanent Marker', cursive; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        .container { text-align: center; background: #2a2a2a; padding: 40px; border-radius: 20px; border: 4px solid #f39c12; box-shadow: 0 0 20px rgba(243, 156, 18, 0.5); }
         h1 { color: #f39c12; font-size: 3rem; margin-bottom: 10px; }
-        
-        .treasury {
-            font-size: 1.2rem;
-            color: #2ecc71;
-            margin-bottom: 20px;
-        }
-
-        .slot-machine {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin: 30px 0;
-        }
-
-        .reel {
-            width: 80px;
-            height: 80px;
-            background: white;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            color: #333;
-            border: 3px solid #7f8c8d;
-        }
-
-        .btn {
-            background: #f39c12;
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            font-size: 1.5rem;
-            font-family: 'Permanent Marker', cursive;
-            cursor: pointer;
-            border-radius: 50px;
-            transition: 0.3s;
-        }
-
+        .treasury { font-size: 1.2rem; color: #2ecc71; margin-bottom: 20px; }
+        .slot-machine { display: flex; gap: 15px; justify-content: center; margin: 30px 0; }
+        .reel { width: 80px; height: 80px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: #333; border: 3px solid #7f8c8d; }
+        .btn { background: #f39c12; color: white; border: none; padding: 15px 40px; font-size: 1.5rem; font-family: 'Permanent Marker', cursive; cursor: pointer; border-radius: 50px; transition: 0.3s; }
         .btn:hover { background: #e67e22; transform: scale(1.05); }
         .btn:disabled { background: #7f8c8d; cursor: not-allowed; }
-
-        #status {
-            margin-top: 20px;
-            font-size: 1.2rem;
-            height: 1.5rem;
-            color: #f1c40f;
-        }
-
-        .wallet-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: #f39c12;
-            border: none;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-family: 'Permanent Marker', cursive;
-            z-index: 1000;
-        }
+        #status { margin-top: 20px; font-size: 1.2rem; height: 1.5rem; color: #f1c40f; }
+        .wallet-btn { position: absolute; top: 20px; right: 20px; background: #f39c12; border: none; color: white; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-family: 'Permanent Marker', cursive; z-index: 1000; }
     </style>
 </head>
 <body>
-
     <button class="wallet-btn" id="connectBtn" onclick="connectWallet()">CONNECT WALLET</button>
-
     <div class="container">
         <h1>BALOO BITE</h1>
         <div class="treasury">LIVE TREASURY: <span id="balance">0.00</span> XNT</div>
-        
         <div class="slot-machine">
-            <div class="reel" id="reel1">🐾</div>
-            <div class="reel" id="reel2">🦴</div>
-            <div class="reel" id="reel3">🥈</div>
+            <div id="reel1" class="reel">🐾</div>
+            <div id="reel2" class="reel">🐾</div>
+            <div id="reel3" class="reel">🐾</div>
         </div>
-
         <button class="btn" id="playBtn" onclick="playGame()">BITE THE BONE (1 XNT)</button>
         <div id="status">READY TO BITE?</div>
     </div>
@@ -118,77 +40,67 @@
         const RPC_URL = "https://rpc.testnet.x1.xyz";
 
         const getProvider = () => {
-          if ('backpack' in window) { return window.backpack; }
-          if ('solana' in window) { return window.solana; }
-          return null;
+            if ('backpack' in window) return window.backpack;
+            if ('solana' in window) return window.solana;
+            return null;
         };
 
         async function updateTreasuryBalance() {
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL);
-                const pubKey = new solanaWeb3.PublicKey(TREASURY_WALLET);
-                const balance = await connection.getBalance(pubKey);
+                const balance = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY_WALLET));
                 document.getElementById('balance').innerText = (balance / 1000000000).toFixed(2);
-            } catch (err) {
-                console.log("Balance fetch pending...");
-            }
+            } catch (err) { console.log("Balance check..."); }
         }
 
         async function connectWallet() {
             const provider = getProvider();
-            
-            if (!provider) {
-                alert("PLEASE INSTALL BACKPACK WALLET!");
-                return;
-            }
-
+            if (!provider) return alert("INSTALL BACKPACK!");
             try {
-                const response = await provider.connect();
-                walletAddress = response.publicKey.toString();
-                document.getElementById('connectBtn').innerText = "CONNECTED: " + walletAddress.slice(0,4) + "...";
+                const resp = await provider.connect();
+                walletAddress = resp.publicKey.toString();
+                document.getElementById('connectBtn').innerText = walletAddress.slice(0,4) + "...";
                 document.getElementById('status').innerText = "WALLET LINKED!";
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) { console.error(err); }
         }
 
         async function playGame() {
-            const provider = getProvider();
-            if (!walletAddress) {
-                await connectWallet();
-                if (!walletAddress) return;
-            }
-
+            if (!walletAddress) return await connectWallet();
             const statusEl = document.getElementById('status');
             const playBtn = document.getElementById('playBtn');
-            statusEl.innerText = "WAITING FOR APPROVAL...";
+            statusEl.innerText = "SENDING 1 XNT...";
             playBtn.disabled = true;
 
             try {
+                const provider = getProvider();
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
-
                 const transaction = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: new solanaWeb3.PublicKey(walletAddress),
                         toPubkey: new solanaWeb3.PublicKey(TREASURY_WALLET),
-                        lamports: 1000000000 
+                        lamports: 1000000000
                     })
                 );
 
                 const { signature } = await provider.signAndSendTransaction(transaction);
-                statusEl.innerText = "CONFIRMING BITE...";
+                statusEl.innerText = "CONFIRMING...";
                 await connection.confirmTransaction(signature);
                 
                 statusEl.innerText = "SPINNING...";
                 
-                const response = await fetch('/api/play.js', {
+                // DE FIX: /api/play aanroepen (Vercel standaard)
+                const response = await fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ signature, player: walletAddress })
                 });
 
                 const result = await response.json();
-                startSpinAnim(result.symbols, result.message);
+                if (response.ok) {
+                    startSpinAnim(result.symbols, result.message);
+                } else {
+                    throw new Error(result.error);
+                }
 
             } catch (err) {
                 console.error(err);
@@ -198,20 +110,17 @@
         }
 
         function startSpinAnim(finalSymbols, finalMessage) {
-            const reels = ['reel1', 'reel2', 'reel3'];
             const items = ['🐾', '🦴', '🥈', '🥇'];
             let spins = 0;
-            
             const interval = setInterval(() => {
-                reels.forEach(id => {
-                    document.getElementById(id).innerText = items[Math.floor(Math.random() * items.length)];
-                });
-                spins++;
-                if (spins > 20) {
+                document.getElementById('reel1').innerText = items[Math.floor(Math.random()*4)];
+                document.getElementById('reel2').innerText = items[Math.floor(Math.random()*4)];
+                document.getElementById('reel3').innerText = items[Math.floor(Math.random()*4)];
+                if (++spins > 20) {
                     clearInterval(interval);
-                    reels.forEach((id, index) => {
-                        document.getElementById(id).innerText = finalSymbols[index];
-                    });
+                    document.getElementById('reel1').innerText = finalSymbols[0];
+                    document.getElementById('reel2').innerText = finalSymbols[1];
+                    document.getElementById('reel3').innerText = finalSymbols[2];
                     document.getElementById('status').innerText = finalMessage;
                     document.getElementById('playBtn').disabled = false;
                     updateTreasuryBalance();
@@ -219,8 +128,7 @@
             }, 100);
         }
 
-        setInterval(updateTreasuryBalance, 10000);
-        window.addEventListener('load', updateTreasuryBalance);
+        window.onload = updateTreasuryBalance;
     </script>
 </body>
 </html>
