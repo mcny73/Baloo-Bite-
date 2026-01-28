@@ -8,42 +8,69 @@
         .game-card { background: #0a0a0a; border: 4px solid #ffd700; border-radius: 20px; padding: 25px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
         .pot-container { background: #111; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; }
         .pot-value { font-size: 40px; color: #fff; text-shadow: 0 0 10px #ffd700; }
-        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 22px; border-radius: 15px; text-transform: uppercase; }
+        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 22px; border-radius: 15px; text-transform: uppercase; box-shadow: 0 4px 0 #665200; }
+        .btn-bite:disabled { opacity: 0.5; filter: grayscale(1); }
+        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; min-height: 20px; }
     </style>
 </head>
 <body>
     <div class="game-card">
         <div class="pot-container">
             <div style="font-size: 10px; color: #ffd700;">LIVE X1 TREASURY</div>
-            <div id="potDisplay" class="pot-value">SYNCING...</div>
+            <div id="potDisplay" class="pot-value">318.75</div>
         </div>
         <button class="btn-bite" id="mainBtn" onclick="runBite()">BITE THE BONE</button>
-        <div id="status" style="margin-top:15px; font-size:12px;">READY</div>
+        <div id="status">READY</div>
     </div>
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
         const TREASURY = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        const X1_TESTNET_RPC = "https://rpc.testnet.x1.xyz"; 
-        const connection = new solanaWeb3.Connection(X1_TESTNET_RPC, "confirmed");
+        const X1_RPC = "https://rpc.testnet.x1.xyz"; 
+        const connection = new solanaWeb3.Connection(X1_RPC, "confirmed");
 
         async function updatePot() {
             try {
-                const balance = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY));
-                document.getElementById('potDisplay').innerText = (balance / 1000000000).toFixed(2);
-            } catch(e) { console.error("Fetch failed:", e); }
+                const bal = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY));
+                document.getElementById('potDisplay').innerText = (bal / 1e9).toFixed(2);
+            } catch(e) {}
         }
-        setInterval(updatePot, 10000); 
         updatePot();
 
         async function runBite() {
+            const btn = document.getElementById('mainBtn');
+            const status = document.getElementById('status');
             const provider = window.backpack || window.x1;
+
             if (!provider) return alert("Wallet not found!");
+            btn.disabled = true;
+            status.innerText = "STARTING...";
+
             try {
                 await provider.connect();
-                // Add your transaction logic here
-                alert("Connected to: " + provider.publicKey.toString());
-            } catch (err) { alert("Error: " + err.message); }
+                status.innerText = "SENDING 1 XNT...";
+
+                const tx = new solanaWeb3.Transaction().add(
+                    solanaWeb3.SystemProgram.transfer({
+                        fromPubkey: provider.publicKey,
+                        toPubkey: new solanaWeb3.PublicKey(TREASURY),
+                        lamports: 1000000000 
+                    })
+                );
+
+                const { blockhash } = await connection.getLatestBlockhash();
+                tx.recentBlockhash = blockhash;
+                tx.feePayer = provider.publicKey;
+                
+                const signature = await provider.signAndSendTransaction(tx);
+                status.innerText = "SUCCESS! SIG: " + signature.slice(0,8);
+                updatePot();
+
+            } catch (err) {
+                console.error(err);
+                status.innerText = (err.code === -32002) ? "CLEAR WALLET PENDING" : "ERROR - RETRY";
+            }
+            setTimeout(() => { btn.disabled = false; status.innerText = "READY"; }, 5000);
         }
     </script>
 </body>
