@@ -11,15 +11,15 @@ export default async function handler(req, res) {
         const secretKey = bs58.decode(process.env.TREASURY_PRIVATE_KEY);
         const treasuryKeypair = Keypair.fromSecretKey(secretKey);
         
-        // Setup Addresses
+        // DESTINATIONS
         const devWallet = new PublicKey("BAavVn1N73U9k9S7D8XmGq6U6p1D5K7L8M9N0O1P2Q3"); 
-        const buyBurnWallet = new PublicKey("11111111111111111111111111111111"); // Replace with your Baloo Swap logic/address
+        const koper10_BurnWallet = new PublicKey("4fVpY8vMvVzT9uR7nJ3xL5k2H1g9f8D7s6A5S4D3F2G1"); // Koper 10
 
         const betAmount = 1000000000; // 1 XNT
         const devFee = betAmount * 0.08;
         const burnFee = betAmount * 0.02;
 
-        // Execute Fees Immediately
+        // EXECUTE AUTOMATED DISTRIBUTION
         const feeTx = new Transaction().add(
             SystemProgram.transfer({
                 fromPubkey: treasuryKeypair.publicKey,
@@ -28,13 +28,14 @@ export default async function handler(req, res) {
             }),
             SystemProgram.transfer({
                 fromPubkey: treasuryKeypair.publicKey,
-                toPubkey: buyBurnWallet,
+                toPubkey: koper10_BurnWallet,
                 lamports: burnFee,
             })
         );
-        await connection.sendTransaction(feeTx, [treasuryKeypair]);
+        
+        const feeSig = await connection.sendTransaction(feeTx, [treasuryKeypair]);
 
-        // Logic for Slot Result
+        // GAME LOGIC
         const reels = ['🐾', '🦴', '🥈', '🥇'];
         const s1 = reels[Math.floor(Math.random() * reels.length)];
         const s2 = reels[Math.floor(Math.random() * reels.length)];
@@ -63,7 +64,8 @@ export default async function handler(req, res) {
         res.status(200).json({
             symbols: [s1, s2, s3],
             message: message,
-            burnDetail: `Automated 2% $BALOO Buy-back & Burn complete! 🔥`
+            burnDetail: `2% $BALOO Buy-back sent to Koper 10! 🔥`,
+            tx: feeSig
         });
 
     } catch (err) {
