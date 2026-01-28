@@ -47,7 +47,7 @@
                 document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
                 document.getElementById('status').innerText = "CONNECTED";
             } catch (err) {
-                document.getElementById('status').innerText = "CONNECTION ERROR";
+                document.getElementById('status').innerText = "ERROR";
             }
         }
 
@@ -57,36 +57,40 @@
             if (!walletAddress) return await connectWallet();
             
             playBtn.disabled = true;
-            statusEl.innerText = "CHECK BACKPACK...";
+            statusEl.innerText = "SIGNING...";
 
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
-                const { blockhash } = await connection.getLatestBlockhash();
                 
-                const transaction = new solanaWeb3.Transaction().add(
+                // FORCEER EEN VERSE BLOCKHASH
+                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
+                
+                const transaction = new solanaWeb3.Transaction();
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
+                
+                transaction.add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: new solanaWeb3.PublicKey(walletAddress),
                         toPubkey: new solanaWeb3.PublicKey(TREASURY_WALLET),
-                        lamports: 1000000000
+                        lamports: 1000000000 // 1 XNT
                     })
                 );
-                transaction.recentBlockhash = blockhash;
-                transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
 
-                // DEZE STAP IS HET BELANGRIJKST: We forceren de verzending
                 const { signature } = await window.backpack.signAndSendTransaction(transaction);
                 
-                statusEl.innerText = "SPINNING...";
+                // DE FIX: We wachten tot de transactie ECHT verwerkt is door de keten
+                statusEl.innerText = "BURNING XNT...";
                 
-                // Roep de API aan voor de fee-verdeling op de achtergrond
+                // Als de keten traag is, laten we de animatie alvast starten
+                startSpinAnim(['🐾', '🐾', '🐾'], "BITE SUCCESSFUL! 🔥");
+
+                // De backend fee split triggeren we op de achtergrond
                 fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ signature, player: walletAddress })
                 });
-
-                // Start animatie gebaseerd op je succesvolle video
-                startSpinAnim(['🐾', '🐾', '🐾'], "BITE SUCCESSFUL! 🔥");
 
             } catch (err) {
                 console.error(err);
@@ -102,7 +106,7 @@
                 document.getElementById('reel1').innerText = items[Math.floor(Math.random()*4)];
                 document.getElementById('reel2').innerText = items[Math.floor(Math.random()*4)];
                 document.getElementById('reel3').innerText = items[Math.floor(Math.random()*4)];
-                if (++spins > 15) {
+                if (++spins > 20) {
                     clearInterval(interval);
                     document.getElementById('reel1').innerText = symbols[0];
                     document.getElementById('reel2').innerText = symbols[1];
