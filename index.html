@@ -89,6 +89,7 @@
             padding: 10px 20px;
             border-radius: 10px;
             cursor: pointer;
+            z-index: 100;
         }
     </style>
 </head>
@@ -115,81 +116,95 @@
         const TREASURY_WALLET = "39fuVmCFZDpoirjpMoJUoBmWTj27c3Vk69hFf48QGtPe";
         const RPC_URL = "https://rpc.testnet.x1.xyz";
 
+        // Functie om saldo op te halen
         async function updateTreasuryBalance() {
             try {
+                if (!window.solanaWeb3) return;
                 const connection = new solanaWeb3.Connection(RPC_URL);
                 const pubKey = new solanaWeb3.PublicKey(TREASURY_WALLET);
                 const balance = await connection.getBalance(pubKey);
                 document.getElementById('balance').innerText = (balance / 1000000000).toFixed(2);
             } catch (err) {
-                console.error("Balance fetch error");
+                console.error("Balance fetch error:", err);
             }
         }
 
         setInterval(updateTreasuryBalance, 5000);
         updateTreasuryBalance();
 
+        // Wallet verbinden
         async function connectWallet() {
-            if (window.solana && window.solana.isBackpack) {
+            console.log("Connect attempt triggered...");
+            const provider = window.solana;
+
+            if (provider) {
                 try {
-                    const response = await window.solana.connect();
+                    const response = await provider.connect();
                     walletAddress = response.publicKey.toString();
                     document.getElementById('connectBtn').innerText = walletAddress.slice(0,4) + "..." + walletAddress.slice(-4);
-                    document.getElementById('status').innerText = "CONNECTED!";
+                    document.getElementById('status').innerText = "WALLET CONNECTED!";
+                    console.log("Connected to:", walletAddress);
                 } catch (err) {
-                    alert("Connection failed");
+                    console.error("User rejected connection:", err);
+                    alert("CONNECTION REJECTED");
                 }
             } else {
-                alert("Please install Backpack Wallet!");
+                alert("BACKPACK WALLET NOT FOUND! PLEASE INSTALL AND REFRESH.");
+                window.open("https://backpack.app/", "_blank");
             }
         }
 
+        // Het spel spelen
         async function playGame() {
             if (!walletAddress) {
-                alert("CONNECT WALLET FIRST!");
-                return;
+                await connectWallet();
+                if (!walletAddress) return;
             }
 
             const statusEl = document.getElementById('status');
             const playBtn = document.getElementById('playBtn');
-            statusEl.innerText = "WAITING FOR APPROVAL...";
+            
+            statusEl.innerText = "CHECKING WALLET...";
             playBtn.disabled = true;
 
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
+                
+                // Transactie maken: 1 XNT van gebruiker naar Treasury
                 const transaction = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: new solanaWeb3.PublicKey(walletAddress),
                         toPubkey: new solanaWeb3.PublicKey(TREASURY_WALLET),
-                        lamports: 1000000000
+                        lamports: 1000000000 // 1 XNT
                     })
                 );
 
                 const { signature } = await window.solana.signAndSendTransaction(transaction);
-                statusEl.innerText = "CONFIRMING ON X1...";
-                await connection.confirmTransaction(signature);
+                statusEl.innerText = "CONFIRMING BITE...";
                 
+                await connection.confirmTransaction(signature);
                 statusEl.innerText = "SPINNING...";
                 
-                // Communicatie met de Vercel API
+                // Roep de backend aan voor de uitslag en verdeling (8/2/90)
                 const response = await fetch('/api/play.js', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ signature, player: walletAddress })
                 });
 
-                if (!response.ok) throw new Error("Backend offline");
+                if (!response.ok) throw new Error("Backend Error");
 
                 const result = await response.json();
                 startSpinAnim(result.symbols, result.message);
 
             } catch (err) {
-                console.error(err);
+                console.error("Game error:", err);
                 statusEl.innerText = "ERROR - TRY AGAIN";
                 playBtn.disabled = false;
             }
         }
 
+        // Draai-animatie
         function startSpinAnim(finalSymbols, finalMessage) {
             const reels = ['reel1', 'reel2', 'reel3'];
             const items = ['🐾', '🦴', '🥈', '🥇', '❌'];
@@ -207,4 +222,15 @@
                     });
                     document.getElementById('status').innerText = finalMessage;
                     document.getElementById('playBtn').disabled = false;
-                    updateTreas
+                    updateTreasuryBalance();
+                }
+            }, 100);
+        }
+
+        // Check of Backpack al geladen is
+        window.addEventListener('load', () => {
+            setTimeout(updateTreasuryBalance, 1000);
+        });
+    </script>
+</body>
+</html>
