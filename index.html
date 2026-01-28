@@ -3,35 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BALOO BITE - WIN XNT</title>
+    <title>BALOO BITE - WIN XNT & BURN $BALOO</title>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
     <style>
-        body { background: #1a1a1a; color: white; font-family: 'Permanent Marker', cursive; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        .container { text-align: center; background: #2a2a2a; padding: 40px; border-radius: 20px; border: 4px solid #f39c12; box-shadow: 0 0 20px rgba(243, 156, 18, 0.5); }
-        h1 { color: #f39c12; font-size: 3rem; margin-bottom: 10px; }
+        body { background: #1a1a1a; color: white; font-family: 'Permanent Marker', cursive; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { text-align: center; background: #2a2a2a; padding: 40px; border-radius: 20px; border: 4px solid #f39c12; box-shadow: 0 0 20px rgba(243, 156, 18, 0.5); position: relative; }
+        h1 { color: #f39c12; font-size: 3.5rem; margin: 0; }
         .treasury { font-size: 1.2rem; color: #2ecc71; margin-bottom: 20px; }
-        .slot-machine { display: flex; gap: 15px; justify-content: center; margin: 30px 0; }
-        .reel { width: 80px; height: 80px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: #333; border: 3px solid #7f8c8d; }
-        .btn { background: #f39c12; color: white; border: none; padding: 15px 40px; font-size: 1.5rem; font-family: 'Permanent Marker', cursive; cursor: pointer; border-radius: 50px; transition: 0.3s; }
+        .slot-machine { display: flex; gap: 15px; justify-content: center; margin: 20px 0; }
+        .reel { width: 90px; height: 90px; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; color: #333; border: 4px solid #7f8c8d; }
+        .btn { background: #f39c12; color: white; border: none; padding: 18px 45px; font-size: 1.8rem; font-family: 'Permanent Marker', cursive; cursor: pointer; border-radius: 50px; transition: 0.3s; }
         .btn:hover { background: #e67e22; transform: scale(1.05); }
         .btn:disabled { background: #7f8c8d; cursor: not-allowed; }
-        #status { margin-top: 20px; font-size: 1.2rem; height: 1.5rem; color: #f1c40f; }
-        .wallet-btn { position: absolute; top: 20px; right: 20px; background: #f39c12; border: none; color: white; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-family: 'Permanent Marker', cursive; z-index: 1000; }
+        #status { margin-top: 20px; font-size: 1.4rem; color: #f1c40f; min-height: 1.6rem; }
+        #burn-alert { color: #ff4757; font-size: 1rem; margin-top: 10px; font-style: italic; opacity: 0; transition: 0.5s; }
+        .wallet-btn { position: absolute; top: 20px; right: 20px; background: #f39c12; border: none; color: white; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-family: 'Permanent Marker', cursive; }
     </style>
 </head>
 <body>
     <button class="wallet-btn" id="connectBtn" onclick="connectWallet()">CONNECT WALLET</button>
     <div class="container">
         <h1>BALOO BITE</h1>
-        <div class="treasury">LIVE TREASURY: <span id="balance">0.00</span> XNT</div>
+        <div class="treasury">TREASURY: <span id="balance">0.00</span> XNT</div>
         <div class="slot-machine">
             <div id="reel1" class="reel">🐾</div>
             <div id="reel2" class="reel">🐾</div>
             <div id="reel3" class="reel">🐾</div>
         </div>
         <button class="btn" id="playBtn" onclick="playGame()">BITE THE BONE (1 XNT)</button>
-        <div id="status">READY TO BITE?</div>
+        <div id="status">READY?</div>
+        <div id="burn-alert">🔥 $BALOO BURNED!</div>
     </div>
 
     <script>
@@ -39,18 +41,14 @@
         const TREASURY_WALLET = "39fuVmCFZDpoirjpMoJUoBmWTj27c3Vk69hFf48QGtPe";
         const RPC_URL = "https://rpc.testnet.x1.xyz";
 
-        const getProvider = () => {
-            if ('backpack' in window) return window.backpack;
-            if ('solana' in window) return window.solana;
-            return null;
-        };
+        const getProvider = () => window.backpack || window.solana || null;
 
         async function updateTreasuryBalance() {
             try {
                 const connection = new solanaWeb3.Connection(RPC_URL);
                 const balance = await connection.getBalance(new solanaWeb3.PublicKey(TREASURY_WALLET));
                 document.getElementById('balance').innerText = (balance / 1000000000).toFixed(2);
-            } catch (err) { console.log("Balance check..."); }
+            } catch (err) { console.log("Updating..."); }
         }
 
         async function connectWallet() {
@@ -60,16 +58,18 @@
                 const resp = await provider.connect();
                 walletAddress = resp.publicKey.toString();
                 document.getElementById('connectBtn').innerText = walletAddress.slice(0,4) + "...";
-                document.getElementById('status').innerText = "WALLET LINKED!";
             } catch (err) { console.error(err); }
         }
 
         async function playGame() {
             if (!walletAddress) return await connectWallet();
             const statusEl = document.getElementById('status');
+            const burnEl = document.getElementById('burn-alert');
             const playBtn = document.getElementById('playBtn');
-            statusEl.innerText = "SENDING 1 XNT...";
+            
+            statusEl.innerText = "WAITING FOR APPROVAL...";
             playBtn.disabled = true;
+            burnEl.style.opacity = "0";
 
             try {
                 const provider = getProvider();
@@ -88,7 +88,6 @@
                 
                 statusEl.innerText = "SPINNING...";
                 
-                // DE FIX: /api/play aanroepen (Vercel standaard)
                 const response = await fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -97,10 +96,8 @@
 
                 const result = await response.json();
                 if (response.ok) {
-                    startSpinAnim(result.symbols, result.message);
-                } else {
-                    throw new Error(result.error);
-                }
+                    startSpinAnim(result.symbols, result.message, result.burnDetail);
+                } else { throw new Error(result.error); }
 
             } catch (err) {
                 console.error(err);
@@ -109,7 +106,7 @@
             }
         }
 
-        function startSpinAnim(finalSymbols, finalMessage) {
+        function startSpinAnim(finalSymbols, finalMessage, burnDetail) {
             const items = ['🐾', '🦴', '🥈', '🥇'];
             let spins = 0;
             const interval = setInterval(() => {
@@ -122,6 +119,8 @@
                     document.getElementById('reel2').innerText = finalSymbols[1];
                     document.getElementById('reel3').innerText = finalSymbols[2];
                     document.getElementById('status').innerText = finalMessage;
+                    document.getElementById('burn-alert').innerText = burnDetail;
+                    document.getElementById('burn-alert').style.opacity = "1";
                     document.getElementById('playBtn').disabled = false;
                     updateTreasuryBalance();
                 }
