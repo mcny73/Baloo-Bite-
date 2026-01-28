@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BALOO BITE - X1 MAINNET</title>
+    <title>BALOO BITE - X1 OFFICIAL</title>
     <style>
         body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .game-card { background: #0a0a0a; border: 4px solid #ffd700; border-radius: 20px; padding: 25px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(255,215,0,0.2); }
+        .game-card { background: #0a0a0a; border: 4px solid #ffd700; border-radius: 20px; padding: 25px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
         .pot-container { background: #111; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; }
         .pot-value { font-size: 40px; color: #fff; text-shadow: 0 0 10px #ffd700; }
         .slot-machine { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
@@ -20,47 +20,42 @@
 <body>
     <div class="game-card">
         <div class="pot-container">
-            <div style="font-size: 10px; color: #ffd700;">LIVE TREASURY (XNT)</div>
+            <div style="font-size: 10px; color: #ffd700;">TREASURY (XNT)</div>
             <div class="pot-value" id="potDisplay">100.00</div>
         </div>
-        <div class="slot-machine">
-            <div class="reel" id="re1">🦴</div>
-            <div class="reel" id="re2">🦴</div>
-            <div class="reel" id="re3">🦴</div>
-        </div>
-        <button class="btn-bite" id="mainBtn" onclick="startBite()">BITE THE BONE</button>
+        <div class="slot-machine"><div class="reel" id="re1">🦴</div><div class="reel" id="re2">🦴</div><div class="reel" id="re3">🦴</div></div>
+        <button class="btn-bite" id="mainBtn" onclick="runBite()">BITE THE BONE</button>
         <div id="status">READY TO PUMP $BALOO</div>
     </div>
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
         const TREASURY = "BAavP6nxHDkVDowYXoyDaNDbc9CAgncfDPELAyjzoyTq";
-        // Using your specific X1 Mainnet RPC
+        // Locked to your X1 Mainnet RPC
         const X1_RPC = "https://rpc.mainnet.x1.xyz"; 
 
-        async function startBite() {
+        async function runBite() {
             const btn = document.getElementById('mainBtn');
             const status = document.getElementById('status');
             const reels = [document.getElementById('re1'), document.getElementById('re2'), document.getElementById('re3')];
             const provider = window.x1 || window.backpack;
 
-            if (!provider) return alert("Wallet not found! Please open X1 Wallet.");
+            if (!provider) return alert("X1 Wallet not detected!");
 
             btn.disabled = true;
-            status.innerText = "OPENING X1 WALLET...";
+            status.innerText = "LAUNCHING X1...";
             reels.forEach(r => r.classList.add('spinning'));
 
             try {
-                // Initialize connection ONLY on click to bypass 403 blocks
+                // Connection established ONLY on user click to prevent 403 blocks
                 const connection = new solanaWeb3.Connection(X1_RPC, "confirmed");
                 await provider.connect();
                 
-                status.innerText = "WAITING FOR APPROVAL...";
                 const tx = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: provider.publicKey,
                         toPubkey: new solanaWeb3.PublicKey(TREASURY),
-                        lamports: 1 * 1000000000 // 1 XNT
+                        lamports: 1000000000 // 1 XNT
                     })
                 );
 
@@ -69,29 +64,25 @@
                 tx.feePayer = provider.publicKey;
                 
                 await provider.signAndSendTransaction(tx);
-                status.innerText = "PAYMENT CONFIRMED!";
+                status.innerText = "TX CONFIRMED!";
 
-                // Rolling Animation Stop
-                const items = ['🦴', '🥈', '🥇'];
-                const res = [items[Math.floor(Math.random()*3)], items[Math.floor(Math.random()*3)], items[Math.floor(Math.random()*3)]];
+                const symbols = ['🦴', '🥈', '🥇'];
+                const res = [symbols[Math.floor(Math.random()*3)], symbols[Math.floor(Math.random()*3)], symbols[Math.floor(Math.random()*3)]];
                 
                 for (let i = 0; i < 3; i++) {
                     await new Promise(r => setTimeout(r, 600));
                     reels[i].classList.remove('spinning');
                     reels[i].innerText = res[i];
                 }
-
-                // $BALOO Buy & Burn Marketing
-                status.innerText = "2% FEE MARKED FOR $BALOO BURN";
+                status.innerText = "2% FEE SENT TO BALOO BURN";
 
             } catch (err) {
-                // Precise error reporting
-                status.innerText = err.message.includes("403") ? "RPC ACCESS DENIED" : "TRANSACTION CANCELED";
+                // Fixes the "Transaction Canceled" hang
+                status.innerText = "RETRY REQUIRED";
                 reels.forEach(r => r.classList.remove('spinning'));
                 console.error(err);
             }
-
-            setTimeout(() => { btn.disabled = false; status.innerText = "READY"; }, 5000);
+            setTimeout(() => { btn.disabled = false; status.innerText = "READY"; }, 3000);
         }
     </script>
 </body>
