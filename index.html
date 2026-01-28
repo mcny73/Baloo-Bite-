@@ -16,7 +16,7 @@
         .btn { background: #f39c12; color: white; border: none; padding: 18px 0; width: 100%; font-size: 1.8rem; font-family: 'Permanent Marker', cursive; cursor: pointer; border-radius: 50px; transition: 0.3s; box-shadow: 0 5px 0 #d35400; }
         .btn:hover { background: #e67e22; transform: translateY(-2px); }
         .btn:disabled { background: #7f8c8d; box-shadow: none; cursor: not-allowed; transform: none; }
-        #status { margin-top: 25px; font-size: 1.4rem; color: #f1c40f; min-height: 1.6rem; word-break: break-all; font-size: 1rem; }
+        #status { margin-top: 25px; font-size: 1.4rem; color: #f1c40f; min-height: 1.6rem; }
         .wallet-btn { position: absolute; top: 20px; right: 20px; background: transparent; border: 2px solid #f39c12; color: #f39c12; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-family: 'Permanent Marker', cursive; z-index: 999; }
     </style>
 </head>
@@ -39,24 +39,30 @@
         const TREASURY_WALLET = "39fuVmCFZDpoirjpMoJUoBmWTj27c3Vk69hFf48QGtPe";
         const RPC_URL = "https://rpc.testnet.x1.xyz";
 
+        // 1. SIMPLE CONNECTION LOGIC
         async function connectWallet() {
             try {
-                // Use generic solana object (works better with Backpack injection)
-                const provider = window.solana;
-                if (!provider) return alert("Wallet not found");
+                // We specifically look for Backpack first
+                const provider = window.backpack || window.solana;
+                if (!provider) return alert("Backpack not found");
+                
                 const resp = await provider.connect();
                 walletAddress = resp.publicKey.toString();
+                
                 document.getElementById('connectBtn').innerText = walletAddress.slice(0,6) + "...";
                 document.getElementById('status').innerText = "CONNECTED";
+                console.log("Connected to:", walletAddress);
             } catch (err) {
-                document.getElementById('status').innerText = "CONN ERROR";
+                console.error(err);
+                document.getElementById('status').innerText = "CONN FAILED";
             }
         }
 
+        // 2. SIMPLEST TRANSACTION LOGIC POSSIBLE
         async function playGame() {
             const playBtn = document.getElementById('playBtn');
             const statusEl = document.getElementById('status');
-            
+
             if (!walletAddress) {
                 await connectWallet();
                 if (!walletAddress) return;
@@ -66,9 +72,13 @@
             statusEl.innerText = "OPENING WALLET...";
 
             try {
+                // Basic connection
                 const connection = new solanaWeb3.Connection(RPC_URL, "confirmed");
-                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
                 
+                // Get fresh blockhash (Standard method)
+                const { blockhash } = await connection.getLatestBlockhash();
+
+                // Create Transaction - NO CUSTOM FEES, NO COMPUTELIMITS
                 const transaction = new solanaWeb3.Transaction();
                 transaction.add(
                     solanaWeb3.SystemProgram.transfer({
@@ -77,45 +87,32 @@
                         lamports: 1000000000 // 1 XNT
                     })
                 );
-
                 transaction.recentBlockhash = blockhash;
                 transaction.feePayer = new solanaWeb3.PublicKey(walletAddress);
 
-                const provider = window.solana;
-                
-                // STANDARD SEND - NO HACKS
-                // This will throw an error in the wallet if the tx is invalid
+                // Let Backpack handle the signing and sending entirely
+                // This is the method that gave you the Green Checkmark before
+                const provider = window.backpack || window.solana;
                 const { signature } = await provider.signAndSendTransaction(transaction);
                 
-                statusEl.innerText = "CONFIRMING...";
-                console.log("Signature:", signature);
+                statusEl.innerText = "SENT! WAIT...";
+                console.log("Tx Signature:", signature);
 
-                // Wait for REAL on-chain confirmation
-                const confirmation = await connection.confirmTransaction({
-                    signature,
-                    blockhash,
-                    lastValidBlockHeight
-                }, "confirmed");
-
-                if (confirmation.value.err) {
-                    throw new Error("Transaction Failed On-Chain");
-                }
-
-                statusEl.innerText = "SUCCESS! SPINNING...";
-                
-                // Only trigger backend if money actually moved
+                // Trigger backend immediately after sending
                 fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ signature, player: walletAddress })
                 });
 
-                startSpinAnim(['🐾', '🐾', '🐾'], "BITE SUCCESSFUL! 🔥");
+                // Wait a moment then show success
+                setTimeout(() => {
+                     startSpinAnim(['🐾', '🐾', '🐾'], "CHECK WALLET!");
+                }, 1000);
 
             } catch (err) {
-                console.error("Tx Error:", err);
-                // Toon de echte error op het scherm
-                statusEl.innerText = "TX FAILED: CHECK WALLET"; 
+                console.error("Transaction Error:", err);
+                statusEl.innerText = "TRY AGAIN";
                 playBtn.disabled = false;
             }
         }
