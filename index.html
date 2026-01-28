@@ -4,35 +4,47 @@
     <meta charset="UTF-8">
     <title>BALOO BITE - MOON MISSION</title>
     <style>
-        body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .game-card { background: #0a0a0a; border: 4px solid #ffd700; border-radius: 20px; padding: 25px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(255,215,0,0.3); }
-        .pot-container { background: #111; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; }
-        .pot-value { font-size: 32px; color: #fff; text-shadow: 0 0 10px #ffd700; }
-        .slot-machine { display: flex; justify-content: center; gap: 10px; margin: 20px 0; background: #151515; padding: 15px; border-radius: 15px; }
-        .reel { width: 80px; height: 100px; background: #222; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 40px; border: 2px solid #333; }
-        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 22px; border-radius: 15px; text-transform: uppercase; transition: 0.2s; }
-        .btn-bite:active { transform: scale(0.98); }
-        .btn-bite:disabled { opacity: 0.5; filter: grayscale(1); }
-        #status { font-family: monospace; font-size: 11px; color: #ffd700; margin-top: 15px; height: 20px; text-transform: uppercase; }
-        .spinning { animation: blur 0.1s infinite linear; }
-        @keyframes blur { 0% { filter: blur(0px); transform: translateY(-2px); } 50% { filter: blur(2px); } 100% { filter: blur(0px); transform: translateY(2px); } }
+        body { background: #000; color: #fff; font-family: 'Impact', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; }
+        .game-card { background: #0a0a0a; border: 4px solid #ffd700; border-radius: 20px; padding: 25px; text-align: center; width: 360px; box-shadow: 0 0 50px rgba(255,215,0,0.3); position: relative; }
+        
+        /* Jackpot Display */
+        .pot-container { background: #111; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 20px; box-shadow: inset 0 0 10px #000; }
+        .pot-value { font-size: 32px; color: #fff; text-shadow: 0 0 10px #ffd700; font-family: monospace; }
+        
+        /* Slot Machine Visuals */
+        .slot-machine { display: flex; justify-content: center; gap: 10px; margin: 25px 0; background: #151515; padding: 15px; border-radius: 15px; border: 2px solid #222; }
+        .reel { width: 85px; height: 110px; background: linear-gradient(#222, #111, #222); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 45px; border: 2px solid #333; transition: 0.5s cubic-bezier(0.45, 0.05, 0.55, 0.95); }
+        
+        /* Spinning Animation */
+        .spinning { animation: blurMove 0.15s infinite linear; }
+        @keyframes blurMove {
+            0% { transform: translateY(-2px); filter: blur(0px); }
+            50% { transform: translateY(2px); filter: blur(4px); }
+            100% { transform: translateY(-2px); filter: blur(0px); }
+        }
+
+        .btn-bite { background: linear-gradient(#ffd700, #b38f00); color: #000; border: none; padding: 20px; width: 100%; cursor: pointer; font-weight: bold; font-size: 24px; border-radius: 15px; text-transform: uppercase; box-shadow: 0 5px 0 #665200; transition: 0.1s; }
+        .btn-bite:active { transform: translateY(3px); box-shadow: 0 2px 0 #665200; }
+        .btn-bite:disabled { opacity: 0.5; filter: grayscale(1); pointer-events: none; }
+        
+        #status { font-family: monospace; font-size: 12px; color: #ffd700; margin-top: 15px; height: 20px; letter-spacing: 1px; }
     </style>
 </head>
 <body>
     <div class="game-card">
         <div class="pot-container">
-            <div style="font-size: 10px; color: #ffd700; letter-spacing: 2px;">LIVE JACKPOT (XNT)</div>
-            <div id="potDisplay" class="pot-value">...</div>
+            <div style="font-size: 10px; color: #ffd700; letter-spacing: 2px; margin-bottom: 5px;">LIVE TREASURY (XNT)</div>
+            <div id="potDisplay" class="pot-value">LOADING...</div>
         </div>
         
         <div class="slot-machine">
             <div class="reel" id="r1">🦴</div>
-            <div class="reel" id="r2">🐾</div>
+            <div class="reel" id="r2">🦴</div>
             <div class="reel" id="r3">🦴</div>
         </div>
 
-        <button class="btn-bite" id="mainBtn" onclick="runBite()">BITE THE BONE (1 XNT)</button>
-        <div id="status">READY TO PUMP $BALOO</div>
+        <button class="btn-bite" id="mainBtn" onclick="runBite()">BITE THE BONE</button>
+        <div id="status">READY TO BURN $BALOO</div>
     </div>
 
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
@@ -48,21 +60,23 @@
             } catch(e) {}
         }
         updatePot();
-        setInterval(updatePot, 10000);
+        setInterval(updatePot, 5000);
 
         async function runBite() {
             const btn = document.getElementById('mainBtn');
             const status = document.getElementById('status');
+            const reels = [document.getElementById('r1'), document.getElementById('r2'), document.getElementById('r3')];
             const provider = window.backpack || window.x1;
-            if (!provider) return alert("Open Backpack!");
+
+            if (!provider) return alert("Please open Backpack!");
 
             btn.disabled = true;
-            status.innerText = "CONNECTING WALLET...";
+            status.innerText = "WAITING FOR WALLET...";
 
             try {
                 await provider.connect();
-                status.innerText = "SIGNING 1 XNT BITE...";
-
+                
+                // 1. De Transactie (Inzet)
                 const tx = new solanaWeb3.Transaction().add(
                     solanaWeb3.SystemProgram.transfer({
                         fromPubkey: provider.publicKey,
@@ -76,13 +90,12 @@
                 tx.feePayer = provider.publicKey;
                 
                 const signature = await provider.signAndSendTransaction(tx);
-                status.innerText = "TX CONFIRMED! ROLLING...";
-
-                // Start Visual Reels
-                const reels = [document.getElementById('r1'), document.getElementById('r2'), document.getElementById('r3')];
+                
+                // 2. Visueel: Start met draaien
+                status.innerText = "TX CONFIRMED! SPINNING...";
                 reels.forEach(r => r.classList.add('spinning'));
 
-                // CALL BACKEND TO CALCULATE WIN (Vercel API)
+                // 3. Backend aanroepen voor resultaat
                 const response = await fetch('/api/play', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -91,23 +104,31 @@
                         player: provider.publicKey.toString()
                     })
                 });
+
                 const result = await response.json();
 
-                // Wait for dramatic effect
+                // 4. Stop de rollen één voor één (dramatisch effect)
                 setTimeout(() => {
                     reels.forEach((r, i) => {
-                        r.classList.remove('spinning');
-                        r.innerText = result.symbols[i];
+                        setTimeout(() => {
+                            r.classList.remove('spinning');
+                            r.innerText = result.symbols[i];
+                        }, i * 400);
                     });
-                    status.innerText = result.message;
-                    updatePot();
-                }, 2000);
+                    
+                    setTimeout(() => {
+                        status.innerText = result.message;
+                        updatePot();
+                        btn.disabled = false;
+                    }, 1500);
+                }, 1000);
 
             } catch (err) {
-                status.innerText = "BITE CANCELED";
+                status.innerText = "ERROR - TRY AGAIN";
+                reels.forEach(r => r.classList.remove('spinning'));
+                btn.disabled = false;
                 console.error(err);
             }
-            setTimeout(() => { btn.disabled = false; }, 4000);
         }
     </script>
 </body>
